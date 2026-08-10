@@ -1,38 +1,8 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local HttpService = game:GetService("HttpService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
---[[
-    Remote Event Call
-    Ang args[1] ay isang `buffer`. Hindi natin alam ang packet format ng laro.
-    Nagbigay ako ng dummy buffer dito. USER DAPAT I-REPLACE ITO NG TAMA.
-]]
-local function callStealRemote()
-    -- !!! USER: PALITAN ANG BUFFER CONTENT SA IBABA NG TAMA !!!
-    -- Halimbawa ng paggawa ng simpleng buffer na may size 1
-    local dummyBuffer = buffer.create(1) 
-    buffer.writeu8(dummyBuffer, 0, 1) -- Naglagay ng 1 byte na 1
-
-    local args = {
-        [1] = dummyBuffer
-    }
-    
-    local remote = ReplicatedStorage:FindFirstChild("SharedModules")
-        and ReplicatedStorage.SharedModules:FindFirstChild("Packet")
-        and ReplicatedStorage.SharedModules.Packet:FindFirstChild("RemoteEvent")
-        
-    if remote then
-        remote:FireServer(unpack(args))
-    else
-        warn("Cannot find RemoteEvent at SharedModules.Packet.RemoteEvent")
-    end
-end
-
-
--- ScreenGui Setup
+-- GUI Setup
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "XDragonHubGUI"
 ScreenGui.ResetOnSpawn = false
@@ -42,12 +12,12 @@ ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 360, 0, 480)
-MainFrame.Position = UDim2.new(0.5, -180, 0.4, -240)
+MainFrame.Position = UDim2.new(0.5, -180, 0.35, -240)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
-MainFrame.ClipsDescendants = true
+MainFrame.ClipsDescendants = false
 MainFrame.Parent = ScreenGui
 
 local FrameCorner = Instance.new("UICorner")
@@ -56,21 +26,18 @@ FrameCorner.Parent = MainFrame
 
 -- Background Image
 local BackgroundImage = Instance.new("ImageLabel")
-BackgroundImage.Name = "BackgroundImage"
 BackgroundImage.Size = UDim2.new(1, 0, 1, 0)
 BackgroundImage.BackgroundTransparency = 1
--- !!! USER: PALITAN ITO NG ROBLOX ASSET ID NG BACKGROUND !!!
-BackgroundImage.Image = "rbxassetid://1536409700667629670" 
-BackgroundImage.ZIndex = 0 -- Ilagay sa likod ng lahat
+BackgroundImage.Image = "rbxassetid://1536409700667629670"
+BackgroundImage.ZIndex = 0
 BackgroundImage.Parent = MainFrame
 
--- Title Frame (Red)
+-- Red Title Frame Header
 local TitleFrame = Instance.new("Frame")
-TitleFrame.Name = "TitleFrame"
 TitleFrame.Size = UDim2.new(1, 0, 0, 50)
-TitleFrame.BackgroundColor3 = Color3.fromRGB(220, 50, 50) -- Pula gaya ng nasa image
+TitleFrame.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
 TitleFrame.BorderSizePixel = 0
-TitleFrame.ZIndex = 1
+TitleFrame.ZIndex = 2
 TitleFrame.Parent = MainFrame
 
 local TitleCorner = Instance.new("UICorner")
@@ -79,117 +46,137 @@ TitleCorner.Parent = TitleFrame
 
 -- Logo Image
 local LogoImage = Instance.new("ImageLabel")
-LogoImage.Name = "LogoImage"
-LogoImage.Size = UDim2.new(0, 40, 0, 40)
-LogoImage.Position = UDim2.new(0.1, 0, 0.5, -20)
+LogoImage.Size = UDim2.new(0, 38, 0, 38)
+LogoImage.Position = UDim2.new(0.04, 0, 0.5, -19)
 LogoImage.BackgroundTransparency = 1
--- !!! USER: PALITAN ITO NG ROBLOX ASSET ID NG LOGO !!!
-LogoImage.Image = "rbxassetid://1511976415632031754" 
-LogoImage.ZIndex = 2
+LogoImage.Image = "rbxassetid://1511976415632031754"
+LogoImage.ZIndex = 3
 LogoImage.Parent = TitleFrame
 
 -- Title Text
 local TitleText = Instance.new("TextLabel")
-TitleText.Name = "TitleText"
 TitleText.Size = UDim2.new(0.7, 0, 1, 0)
-TitleText.Position = UDim2.new(0.2, 0, 0, 0)
+TitleText.Position = UDim2.new(0.18, 0, 0, 0)
 TitleText.BackgroundTransparency = 1
 TitleText.Text = "XDRAGON.HUB"
 TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleText.TextSize = 20
+TitleText.TextSize = 22
 TitleText.Font = Enum.Font.SourceSansBold
-TitleText.ZIndex = 2
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.ZIndex = 3
 TitleText.Parent = TitleFrame
 
--- Close Button
-local CloseButton = Instance.new("TextButton")
-CloseButton.Name = "CloseButton"
-CloseButton.Size = UDim2.new(0, 40, 0, 40)
-CloseButton.Position = UDim2.new(1, -45, 0.5, -20)
-CloseButton.BackgroundTransparency = 1
-CloseButton.Text = "X"
-CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseButton.TextSize = 22
-CloseButton.Font = Enum.Font.SourceSansBold
-CloseButton.ZIndex = 2
-CloseButton.Parent = TitleFrame
-CloseButton.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
-
-
--- Content Container for the Grid
+-- Content Frame
 local ContentContainer = Instance.new("Frame")
-ContentContainer.Name = "ContentContainer"
 ContentContainer.Size = UDim2.new(1, -20, 1, -60)
-ContentContainer.Position = UDim2.new(0, 10, 0, 60)
+ContentContainer.Position = UDim2.new(0, 10, 0, 55)
 ContentContainer.BackgroundTransparency = 1
-ContentContainer.ZIndex = 1
+ContentContainer.ZIndex = 2
 ContentContainer.Parent = MainFrame
 
--- Grid Layout
-local UIGridLayout = Instance.new("UIGridLayout")
-UIGridLayout.Parent = ContentContainer
-UIGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIGridLayout.CellSize = UDim2.new(0.5, -5, 0, 80) -- 2 column grid
-UIGridLayout.CellPadding = UDim2.new(0, 10, 0, 10)
+-- States
+local flyOn = false
+local autoStealOn = false
+local autoHarvestOn = false
+local antiDamageOn = false
+local invincibleOn = false
 
--- Helper to create buttons (following the design in 0.png)
-local function createCyanButton(text, layoutOrder)
-    local btnFrame = Instance.new("Frame") -- Paggawa ng Frame para sa layout logic
-    btnFrame.Size = UDim2.new(1, 0, 0, 80)
-    btnFrame.BackgroundTransparency = 1
-    btnFrame.LayoutOrder = layoutOrder
-    btnFrame.Parent = ContentContainer
+local shieldPart = nil
+local originalTransparencies = {}
 
+-- Button Creation Helper (Cyan Box Style)
+local function createCyanButton(text, pos, size)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 1, 0)
-    btn.BackgroundColor3 = Color3.fromRGB(0, 220, 220) -- Cyan
+    btn.Size = size or UDim2.new(0.48, 0, 0, 90)
+    btn.Position = pos
+    btn.BackgroundColor3 = Color3.fromRGB(0, 220, 220)
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Text = text .. "\n[Off]" -- Default label
+    btn.Text = text
     btn.Font = Enum.Font.SourceSansSemibold
     btn.TextSize = 20
-    btn.LineHeight = 1.2 -- For multiple lines
-    btn.BorderSizePixel = 0
-    btn.Parent = btnFrame
-    
+    btn.LineHeight = 1.2
+    btn.ZIndex = 2
+    btn.Parent = ContentContainer
+
     local btnCorner = Instance.new("UICorner")
     btnCorner.CornerRadius = UDim.new(0, 8)
     btnCorner.Parent = btn
-    
+
     return btn
 end
 
--- Variables para sa logic
-local flyOn, autoStealOn, antiStealOn, invincibleOn = false, false, false, false
+-- ================= LEFT COLUMN =================
+local flyBtn = createCyanButton("Fly:\n[Off]", UDim2.new(0, 0, 0, 0))
+local autoStealBtn = createCyanButton("Auto Steal:\n[Off]", UDim2.new(0, 0, 0, 100))
+local autoHarvestBtn = createCyanButton("Auto Harvest:\n[Off]", UDim2.new(0, 0, 0, 200))
+local antiDamageBtn = createCyanButton("Anti Damage:\n[Off]", UDim2.new(0, 0, 0, 300))
+
+-- ================= RIGHT COLUMN =================
+local invincibleBtn = createCyanButton("Invincible:\n[Off]", UDim2.new(0.52, 0, 0, 0))
+local teleportBtn = createCyanButton("Teleport ↓", UDim2.new(0.52, 0, 0, 100), UDim2.new(0.48, 0, 0, 90))
+
+-- ================= TELEPORT DROPDOWN MENU =================
+local tpDropdownFrame = Instance.new("Frame")
+tpDropdownFrame.Size = UDim2.new(0.48, 0, 0, 135)
+tpDropdownFrame.Position = UDim2.new(0.52, 0, 0, 195)
+tpDropdownFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+tpDropdownFrame.Visible = false
+tpDropdownFrame.ZIndex = 10
+tpDropdownFrame.Parent = ContentContainer
+
+local dropCorner = Instance.new("UICorner")
+dropCorner.CornerRadius = UDim.new(0, 8)
+dropCorner.Parent = tpDropdownFrame
+
+local tpListLayout = Instance.new("UIListLayout")
+tpListLayout.Parent = tpDropdownFrame
+tpListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+tpListLayout.Padding = UDim.new(0, 5)
+
+local function createTpOption(text, order, targetCFrame)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 40)
+    btn.BackgroundColor3 = Color3.fromRGB(0, 180, 180)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Text = text
+    btn.Font = Enum.Font.SourceSansBold
+    btn.TextSize = 16
+    btn.LayoutOrder = order
+    btn.ZIndex = 11
+    btn.Parent = tpDropdownFrame
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 6)
+    corner.Parent = btn
+
+    btn.MouseButton1Click:Connect(function()
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.CFrame = targetCFrame
+        end
+    end)
+end
+
+-- Teleport Options (Selection, Gear Shop, Props Shop)
+createTpOption("Selection", 1, CFrame.new(0, 10, 0))
+createTpOption("Gear Shop", 2, CFrame.new(100, 10, 50))
+createTpOption("Props Shop", 3, CFrame.new(150, 10, -50))
+
+teleportBtn.MouseButton1Click:Connect(function()
+    tpDropdownFrame.Visible = not tpDropdownFrame.Visible
+    teleportBtn.Text = tpDropdownFrame.Visible and "Teleport ↑" or "Teleport ↓"
+end)
+
+-- ================= TOGGLES & MECHANICS =================
+
+-- 1. Fly Logic (Joystick Movement Compatible)
 local flySpeed = 50
 local flyBodyVel, flyBodyGyro
-local forcefield
-
--- Left Column: Toggles
-local flyBtn = createCyanButton("Fly:", 1)
-local autoStealBtn = createCyanButton("Auto Steal:", 3)
-local antiStealBtn = createCyanButton("Anti Steal:", 5)
-
--- Right Column: Misc (Invincible, Teleport Menu, Shops)
-local invincibleBtn = createCyanButton("Invincible:", 2)
-local teleportBtn = createCyanButton("Teleport ↓", 4)
-local gearShopBtn = createCyanButton("Selection\nGear Shop", 6)
-local propsShopBtn = createCyanButton("Props\nShop", 8) -- At layout 8, need clear 7
-
--- Ayusin ang text para sa right column non-toggles
-teleportBtn.Text = "Teleport ↓"
-gearShopBtn.Text = "Selection\nGear Shop"
-propsShopBtn.Text = "Props\nShop"
-
--- Toggles Logic with State Updates
-local function updateToggleBtn(btn, text, isOn)
-    btn.Text = text .. "\n" .. (isOn and "[On]" or "[Off]")
-    btn.BackgroundColor3 = isOn and Color3.fromRGB(0, 190, 190) or Color3.fromRGB(0, 220, 220)
-end
 
 flyBtn.MouseButton1Click:Connect(function()
     flyOn = not flyOn
-    updateToggleBtn(flyBtn, "Fly:", flyOn)
-    
+    flyBtn.Text = "Fly:\n" .. (flyOn and "[On]" or "[Off]")
+
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hrp = char.HumanoidRootPart
@@ -210,140 +197,114 @@ flyBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- 2. Auto Steal Toggle
 autoStealBtn.MouseButton1Click:Connect(function()
     autoStealOn = not autoStealOn
-    updateToggleBtn(autoStealBtn, "Auto Steal:", autoStealOn)
+    autoStealBtn.Text = "Auto Steal:\n" .. (autoStealOn and "[On]" or "[Off]")
 end)
 
-antiStealBtn.MouseButton1Click:Connect(function()
-    antiStealOn = not antiStealOn
-    updateToggleBtn(antiStealBtn, "Anti Steal:", antiStealOn)
+-- 3. Auto Harvest Toggle
+autoHarvestBtn.MouseButton1Click:Connect(function()
+    autoHarvestOn = not autoHarvestOn
+    autoHarvestBtn.Text = "Auto Harvest:\n" .. (autoHarvestOn and "[On]" or "[Off]")
 end)
 
+-- 4. Invincible Toggle (Invisible Character: Transparency = 1)
 invincibleBtn.MouseButton1Click:Connect(function()
     invincibleOn = not invincibleOn
-    updateToggleBtn(invincibleBtn, "Invincible:", invincibleOn)
-    
+    invincibleBtn.Text = "Invincible:\n" .. (invincibleOn and "[On]" or "[Off]")
+
     local char = LocalPlayer.Character
     if not char then return end
-    
+
     if invincibleOn then
-        forcefield = Instance.new("ForceField")
-        forcefield.Visible = false -- Make it invisible for true invincibility effect
-        forcefield.Parent = char
+        originalTransparencies = {}
+        for _, obj in pairs(char:GetDescendants()) do
+            if obj:IsA("BasePart") or obj:IsA("Decal") then
+                originalTransparencies[obj] = obj.Transparency
+                obj.Transparency = 1
+            end
+        end
     else
-        if forcefield then forcefield:Destroy() end
-    end
-end)
-
-
--- Teleport Menu Dropdown
-local teleportMenuOpen = false
-local tpDropdownFrame = Instance.new("Frame")
-tpDropdownFrame.Name = "TeleportDropdown"
-tpDropdownFrame.Size = UDim2.new(1, 0, 0, 100) -- Size of sub-menu
-tpDropdownFrame.Position = UDim2.new(0, 0, 1, 0) -- Under teleportBtn
-tpDropdownFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-tpDropdownFrame.ClipsDescendants = true
-tpDropdownFrame.Visible = false
-tpDropdownFrame.ZIndex = 5
-tpDropdownFrame.Parent = teleportBtn
-
-local dropCorner = Instance.new("UICorner")
-dropCorner.CornerRadius = UDim.new(0, 8)
-dropCorner.Parent = tpDropdownFrame
-
--- Sub-menu buttons helper
-local function createSubMenuButton(text, order)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 40)
-    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Text = text
-    btn.Font = Enum.Font.SourceSansSemibold
-    btn.TextSize = 16
-    btn.ZIndex = 6
-    btn.LayoutOrder = order
-    btn.BorderSizePixel = 0
-    
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 6)
-    btnCorner.Parent = btn
-    
-    return btn
-end
-
-local tpListLayout = Instance.new("UIListLayout")
-tpListLayout.Parent = tpDropdownFrame
-tpListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-tpListLayout.Padding = UDim.new(0, 5)
-
-local tpToGarden = createSubMenuButton("TP to Garden", 1)
-tpToGarden.Parent = tpDropdownFrame
-local tpToShop = createSubMenuButton("TP to Shop", 2)
-tpToShop.Parent = tpDropdownFrame
-
--- Basic Teleport Logic (user must replace with real positions if needed)
-local function teleportPlayer(position)
-    local char = LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame = CFrame.new(position)
-    end
-end
-tpToGarden.MouseButton1Click:Connect(function() teleportPlayer(Vector3.new(0, 10, 0)) end) -- Dummy position
-tpToShop.MouseButton1Click:Connect(function() teleportPlayer(Vector3.new(100, 10, 0)) end) -- Dummy position
-
-
-teleportBtn.MouseButton1Click:Connect(function()
-    teleportMenuOpen = not teleportMenuOpen
-    tpDropdownFrame.Visible = teleportMenuOpen
-    if teleportMenuOpen then
-        teleportBtn.Text = "Teleport ↑"
-    else
-        teleportBtn.Text = "Teleport ↓"
-    end
-end)
-
-
--- Background loops for toggles and functionality
-RunService.RenderStepped:Connect(function()
-    local char = LocalPlayer.Character
-    if not char then return end
-
-    -- Fly Movement Logic
-    if flyOn and char:FindFirstChild("HumanoidRootPart") and flyBodyVel and flyBodyGyro then
-        local cam = workspace.CurrentCamera
-        local moveDir = Vector3.zero
-
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + cam.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - cam.CFrame.LookVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - cam.CFrame.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + cam.CFrame.RightVector end
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0, 1, 0) end
-
-        flyBodyVel.Velocity = moveDir * flySpeed
-        flyBodyGyro.CFrame = cam.CFrame
-    end
-end)
-
--- Separate task for Auto Steal to avoid lag in RenderStepped
-task.spawn(function()
-    while true do
-        task.wait(1) -- Ang dami ng tawag sa bawat segundo (user can change this)
-        if autoStealOn then
-            callStealRemote()
+        for obj, trans in pairs(originalTransparencies) do
+            if obj and obj.Parent then
+                obj.Transparency = trans
+            end
         end
     end
 end)
 
--- Separate task for Anti Steal protection logic
+-- 5. Anti Damage Shield (Invisible Anchored Ring Part Around Player)
+antiDamageBtn.MouseButton1Click:Connect(function()
+    antiDamageOn = not antiDamageOn
+    antiDamageBtn.Text = "Anti Damage:\n" .. (antiDamageOn and "[On]" or "[Off]")
+
+    if not antiDamageOn and shieldPart then
+        shieldPart:Destroy()
+        shieldPart = nil
+    end
+end)
+
+-- ================= MAIN LOOPS =================
+
+-- Frame Loop for Movement & Shield
+RunService.RenderStepped:Connect(function()
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = char.HumanoidRootPart
+    local hum = char:FindFirstChildOfClass("Humanoid")
+
+    -- Fly Joystick Movement
+    if flyOn and flyBodyVel and flyBodyGyro and hum then
+        local cam = workspace.CurrentCamera
+        local moveDir = hum.MoveDirection
+
+        if moveDir.Magnitude > 0 then
+            flyBodyVel.Velocity = cam.CFrame:VectorToWorldSpace(cam.CFrame:VectorToObjectSpace(moveDir)) * flySpeed
+        else
+            flyBodyVel.Velocity = Vector3.zero
+        end
+        flyBodyGyro.CFrame = cam.CFrame
+    end
+
+    -- Anti Damage Barrier Part (Anchored around Player)
+    if antiDamageOn then
+        if not shieldPart or not shieldPart.Parent then
+            shieldPart = Instance.new("Part")
+            shieldPart.Name = "AntiDamagePart"
+            shieldPart.Shape = Enum.PartType.Cylinder
+            shieldPart.Size = Vector3.new(12, 10, 10)
+            shieldPart.Transparency = 1 -- Fully Invisible
+            shieldPart.CanCollide = true
+            shieldPart.Anchored = true
+            shieldPart.Parent = workspace
+        end
+        shieldPart.CFrame = hrp.CFrame * CFrame.Angles(0, 0, math.rad(90))
+    end
+end)
+
+-- Fast Loop for Proximity Prompts (Steal and Harvest Only)
 task.spawn(function()
     while true do
-        task.wait(0.5) 
-        if antiStealOn then
-            -- USER DAPAT MAGLAGAY NG LARO-SPECIFIC NA PROTEKSYON DITO.
-            -- Halimbawa: kung may proximity prompt na gamit ng iba, trigger it first.
+        task.wait(0.1)
+        if autoStealOn or autoHarvestOn then
+            pcall(function()
+                for _, prompt in pairs(workspace:GetDescendants()) do
+                    if prompt:IsA("ProximityPrompt") then
+                        local actionText = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
+
+                        -- Trigger ONLY ProximityPrompts with "Steal"
+                        if autoStealOn and actionText:find("steal") then
+                            fireproximityprompt(prompt)
+                        end
+
+                        -- Trigger ONLY ProximityPrompts with "Harvest"
+                        if autoHarvestOn and actionText:find("harvest") then
+                            fireproximityprompt(prompt)
+                        end
+                    end
+                end
+            end)
         end
     end
 end)
