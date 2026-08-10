@@ -1,67 +1,270 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
+
+--[[
+    Remote Event Call
+    Ang args[1] ay isang `buffer`. Hindi natin alam ang packet format ng laro.
+    Nagbigay ako ng dummy buffer dito. USER DAPAT I-REPLACE ITO NG TAMA.
+]]
+local function callStealRemote()
+    -- !!! USER: PALITAN ANG BUFFER CONTENT SA IBABA NG TAMA !!!
+    -- Halimbawa ng paggawa ng simpleng buffer na may size 1
+    local dummyBuffer = buffer.create(1) 
+    buffer.writeu8(dummyBuffer, 0, 1) -- Naglagay ng 1 byte na 1
+
+    local args = {
+        [1] = dummyBuffer
+    }
+    
+    local remote = ReplicatedStorage:FindFirstChild("SharedModules")
+        and ReplicatedStorage.SharedModules:FindFirstChild("Packet")
+        and ReplicatedStorage.SharedModules.Packet:FindFirstChild("RemoteEvent")
+        
+    if remote then
+        remote:FireServer(unpack(args))
+    else
+        warn("Cannot find RemoteEvent at SharedModules.Packet.RemoteEvent")
+    end
+end
+
 
 -- ScreenGui Setup
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "GrowAGardenGUI"
+ScreenGui.Name = "XDragonHubGUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
 -- Main Frame
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 220, 0, 270)
-MainFrame.Position = UDim2.new(0.5, -110, 0.4, -135)
+MainFrame.Size = UDim2.new(0, 360, 0, 480)
+MainFrame.Position = UDim2.new(0.5, -180, 0.4, -240)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
+MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 
--- Corner Styling
 local FrameCorner = Instance.new("UICorner")
-FrameCorner.CornerRadius = UDim.new(0, 8)
+FrameCorner.CornerRadius = UDim.new(0, 12)
 FrameCorner.Parent = MainFrame
 
--- Title
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.BackgroundColor3 = Color3.fromRGB(45, 140, 60)
-Title.Text = "Grow a Garden GUI"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 16
-Title.Font = Enum.Font.SourceSansBold
-Title.Parent = MainFrame
+-- Background Image
+local BackgroundImage = Instance.new("ImageLabel")
+BackgroundImage.Name = "BackgroundImage"
+BackgroundImage.Size = UDim2.new(1, 0, 1, 0)
+BackgroundImage.BackgroundTransparency = 1
+-- !!! USER: PALITAN ITO NG ROBLOX ASSET ID NG BACKGROUND !!!
+BackgroundImage.Image = "rbxassetid://1536409700667629670" 
+BackgroundImage.ZIndex = 0 -- Ilagay sa likod ng lahat
+BackgroundImage.Parent = MainFrame
+
+-- Title Frame (Red)
+local TitleFrame = Instance.new("Frame")
+TitleFrame.Name = "TitleFrame"
+TitleFrame.Size = UDim2.new(1, 0, 0, 50)
+TitleFrame.BackgroundColor3 = Color3.fromRGB(220, 50, 50) -- Pula gaya ng nasa image
+TitleFrame.BorderSizePixel = 0
+TitleFrame.ZIndex = 1
+TitleFrame.Parent = MainFrame
 
 local TitleCorner = Instance.new("UICorner")
-TitleCorner.CornerRadius = UDim.new(0, 8)
-TitleCorner.Parent = Title
+TitleCorner.CornerRadius = UDim.new(0, 12)
+TitleCorner.Parent = TitleFrame
 
--- Container Layout
-local Container = Instance.new("Frame")
-Container.Size = UDim2.new(1, -20, 1, -50)
-Container.Position = UDim2.new(0, 10, 0, 45)
-Container.BackgroundTransparency = 1
-Container.Parent = MainFrame
+-- Logo Image
+local LogoImage = Instance.new("ImageLabel")
+LogoImage.Name = "LogoImage"
+LogoImage.Size = UDim2.new(0, 40, 0, 40)
+LogoImage.Position = UDim2.new(0.1, 0, 0.5, -20)
+LogoImage.BackgroundTransparency = 1
+-- !!! USER: PALITAN ITO NG ROBLOX ASSET ID NG LOGO !!!
+LogoImage.Image = "rbxassetid://1511976415632031754" 
+LogoImage.ZIndex = 2
+LogoImage.Parent = TitleFrame
 
-local UIList = Instance.new("UIListLayout")
-UIList.Parent = Container
-UIList.SortOrder = Enum.SortOrder.LayoutOrder
-UIList.Padding = UDim.new(0, 8)
+-- Title Text
+local TitleText = Instance.new("TextLabel")
+TitleText.Name = "TitleText"
+TitleText.Size = UDim2.new(0.7, 0, 1, 0)
+TitleText.Position = UDim2.new(0.2, 0, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "XDRAGON.HUB"
+TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleText.TextSize = 20
+TitleText.Font = Enum.Font.SourceSansBold
+TitleText.ZIndex = 2
+TitleText.Parent = TitleFrame
 
--- Helper Function for Buttons
-local function createButton(text, order)
+-- Close Button
+local CloseButton = Instance.new("TextButton")
+CloseButton.Name = "CloseButton"
+CloseButton.Size = UDim2.new(0, 40, 0, 40)
+CloseButton.Position = UDim2.new(1, -45, 0.5, -20)
+CloseButton.BackgroundTransparency = 1
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.TextSize = 22
+CloseButton.Font = Enum.Font.SourceSansBold
+CloseButton.ZIndex = 2
+CloseButton.Parent = TitleFrame
+CloseButton.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+
+-- Content Container for the Grid
+local ContentContainer = Instance.new("Frame")
+ContentContainer.Name = "ContentContainer"
+ContentContainer.Size = UDim2.new(1, -20, 1, -60)
+ContentContainer.Position = UDim2.new(0, 10, 0, 60)
+ContentContainer.BackgroundTransparency = 1
+ContentContainer.ZIndex = 1
+ContentContainer.Parent = MainFrame
+
+-- Grid Layout
+local UIGridLayout = Instance.new("UIGridLayout")
+UIGridLayout.Parent = ContentContainer
+UIGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIGridLayout.CellSize = UDim2.new(0.5, -5, 0, 80) -- 2 column grid
+UIGridLayout.CellPadding = UDim2.new(0, 10, 0, 10)
+
+-- Helper to create buttons (following the design in 0.png)
+local function createCyanButton(text, layoutOrder)
+    local btnFrame = Instance.new("Frame") -- Paggawa ng Frame para sa layout logic
+    btnFrame.Size = UDim2.new(1, 0, 0, 80)
+    btnFrame.BackgroundTransparency = 1
+    btnFrame.LayoutOrder = layoutOrder
+    btnFrame.Parent = ContentContainer
+
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 35)
+    btn.Size = UDim2.new(1, 0, 1, 0)
+    btn.BackgroundColor3 = Color3.fromRGB(0, 220, 220) -- Cyan
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Text = text .. "\n[Off]" -- Default label
+    btn.Font = Enum.Font.SourceSansSemibold
+    btn.TextSize = 20
+    btn.LineHeight = 1.2 -- For multiple lines
+    btn.BorderSizePixel = 0
+    btn.Parent = btnFrame
+    
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 8)
+    btnCorner.Parent = btn
+    
+    return btn
+end
+
+-- Variables para sa logic
+local flyOn, autoStealOn, antiStealOn, invincibleOn = false, false, false, false
+local flySpeed = 50
+local flyBodyVel, flyBodyGyro
+local forcefield
+
+-- Left Column: Toggles
+local flyBtn = createCyanButton("Fly:", 1)
+local autoStealBtn = createCyanButton("Auto Steal:", 3)
+local antiStealBtn = createCyanButton("Anti Steal:", 5)
+
+-- Right Column: Misc (Invincible, Teleport Menu, Shops)
+local invincibleBtn = createCyanButton("Invincible:", 2)
+local teleportBtn = createCyanButton("Teleport ↓", 4)
+local gearShopBtn = createCyanButton("Selection\nGear Shop", 6)
+local propsShopBtn = createCyanButton("Props\nShop", 8) -- At layout 8, need clear 7
+
+-- Ayusin ang text para sa right column non-toggles
+teleportBtn.Text = "Teleport ↓"
+gearShopBtn.Text = "Selection\nGear Shop"
+propsShopBtn.Text = "Props\nShop"
+
+-- Toggles Logic with State Updates
+local function updateToggleBtn(btn, text, isOn)
+    btn.Text = text .. "\n" .. (isOn and "[On]" or "[Off]")
+    btn.BackgroundColor3 = isOn and Color3.fromRGB(0, 190, 190) or Color3.fromRGB(0, 220, 220)
+end
+
+flyBtn.MouseButton1Click:Connect(function()
+    flyOn = not flyOn
+    updateToggleBtn(flyBtn, "Fly:", flyOn)
+    
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = char.HumanoidRootPart
+
+    if flyOn then
+        flyBodyVel = Instance.new("BodyVelocity")
+        flyBodyVel.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+        flyBodyVel.Velocity = Vector3.zero
+        flyBodyVel.Parent = hrp
+
+        flyBodyGyro = Instance.new("BodyGyro")
+        flyBodyGyro.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
+        flyBodyGyro.CFrame = hrp.CFrame
+        flyBodyGyro.Parent = hrp
+    else
+        if flyBodyVel then flyBodyVel:Destroy() end
+        if flyBodyGyro then flyBodyGyro:Destroy() end
+    end
+end)
+
+autoStealBtn.MouseButton1Click:Connect(function()
+    autoStealOn = not autoStealOn
+    updateToggleBtn(autoStealBtn, "Auto Steal:", autoStealOn)
+end)
+
+antiStealBtn.MouseButton1Click:Connect(function()
+    antiStealOn = not antiStealOn
+    updateToggleBtn(antiStealBtn, "Anti Steal:", antiStealOn)
+end)
+
+invincibleBtn.MouseButton1Click:Connect(function()
+    invincibleOn = not invincibleOn
+    updateToggleBtn(invincibleBtn, "Invincible:", invincibleOn)
+    
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    if invincibleOn then
+        forcefield = Instance.new("ForceField")
+        forcefield.Visible = false -- Make it invisible for true invincibility effect
+        forcefield.Parent = char
+    else
+        if forcefield then forcefield:Destroy() end
+    end
+end)
+
+
+-- Teleport Menu Dropdown
+local teleportMenuOpen = false
+local tpDropdownFrame = Instance.new("Frame")
+tpDropdownFrame.Name = "TeleportDropdown"
+tpDropdownFrame.Size = UDim2.new(1, 0, 0, 100) -- Size of sub-menu
+tpDropdownFrame.Position = UDim2.new(0, 0, 1, 0) -- Under teleportBtn
+tpDropdownFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+tpDropdownFrame.ClipsDescendants = true
+tpDropdownFrame.Visible = false
+tpDropdownFrame.ZIndex = 5
+tpDropdownFrame.Parent = teleportBtn
+
+local dropCorner = Instance.new("UICorner")
+dropCorner.CornerRadius = UDim.new(0, 8)
+dropCorner.Parent = tpDropdownFrame
+
+-- Sub-menu buttons helper
+local function createSubMenuButton(text, order)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 40)
     btn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Text = text
     btn.Font = Enum.Font.SourceSansSemibold
-    btn.TextSize = 15
+    btn.TextSize = 16
+    btn.ZIndex = 6
     btn.LayoutOrder = order
-    btn.Parent = Container
+    btn.BorderSizePixel = 0
     
     local btnCorner = Instance.new("UICorner")
     btnCorner.CornerRadius = UDim.new(0, 6)
@@ -70,107 +273,45 @@ local function createButton(text, order)
     return btn
 end
 
--- Variables
-local autoSteal = false
-local antiSteal = false
-local fly = false
-local flySpeed = 50
-local bodyVel, bodyGyro
+local tpListLayout = Instance.new("UIListLayout")
+tpListLayout.Parent = tpDropdownFrame
+tpListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+tpListLayout.Padding = UDim.new(0, 5)
 
--- 1. Auto Steal Toggle
-local autoStealBtn = createButton("Auto Steal: OFF", 1)
-autoStealBtn.MouseButton1Click:Connect(function()
-    autoSteal = not autoSteal
-    autoStealBtn.Text = "Auto Steal: " .. (autoSteal and "ON" or "OFF")
-    autoStealBtn.BackgroundColor3 = autoSteal and Color3.fromRGB(46, 139, 87) or Color3.fromRGB(50, 50, 55)
-end)
+local tpToGarden = createSubMenuButton("TP to Garden", 1)
+tpToGarden.Parent = tpDropdownFrame
+local tpToShop = createSubMenuButton("TP to Shop", 2)
+tpToShop.Parent = tpDropdownFrame
 
--- 2. Anti Steal Toggle
-local antiStealBtn = createButton("Anti Steal: OFF", 2)
-antiStealBtn.MouseButton1Click:Connect(function()
-    antiSteal = not antiSteal
-    antiStealBtn.Text = "Anti Steal: " .. (antiSteal and "ON" or "OFF")
-    antiStealBtn.BackgroundColor3 = antiSteal and Color3.fromRGB(46, 139, 87) or Color3.fromRGB(50, 50, 55)
-end)
-
--- 3. Fly Toggle
-local flyBtn = createButton("Fly: OFF", 3)
-flyBtn.MouseButton1Click:Connect(function()
-    fly = not fly
-    flyBtn.Text = "Fly: " .. (fly and "ON" or "OFF")
-    flyBtn.BackgroundColor3 = fly and Color3.fromRGB(46, 139, 87) or Color3.fromRGB(50, 50, 55)
-
+-- Basic Teleport Logic (user must replace with real positions if needed)
+local function teleportPlayer(position)
     local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = char.HumanoidRootPart
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.CFrame = CFrame.new(position)
+    end
+end
+tpToGarden.MouseButton1Click:Connect(function() teleportPlayer(Vector3.new(0, 10, 0)) end) -- Dummy position
+tpToShop.MouseButton1Click:Connect(function() teleportPlayer(Vector3.new(100, 10, 0)) end) -- Dummy position
 
-    if fly then
-        bodyVel = Instance.new("BodyVelocity")
-        bodyVel.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-        bodyVel.Velocity = Vector3.zero
-        bodyVel.Parent = hrp
 
-        bodyGyro = Instance.new("BodyGyro")
-        bodyGyro.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
-        bodyGyro.CFrame = hrp.CFrame
-        bodyGyro.Parent = hrp
+teleportBtn.MouseButton1Click:Connect(function()
+    teleportMenuOpen = not teleportMenuOpen
+    tpDropdownFrame.Visible = teleportMenuOpen
+    if teleportMenuOpen then
+        teleportBtn.Text = "Teleport ↑"
     else
-        if bodyVel then bodyVel:Destroy() end
-        if bodyGyro then bodyGyro:Destroy() end
+        teleportBtn.Text = "Teleport ↓"
     end
 end)
 
--- 4. Speed Frame Input Box
-local speedFrame = Instance.new("Frame")
-speedFrame.Size = UDim2.new(1, 0, 0, 35)
-speedFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
-speedFrame.LayoutOrder = 4
-speedFrame.Parent = Container
 
-local speedCorner = Instance.new("UICorner")
-speedCorner.CornerRadius = UDim.new(0, 6)
-speedCorner.Parent = speedFrame
-
-local speedLabel = Instance.new("TextLabel")
-speedLabel.Size = UDim2.new(0.5, 0, 1, 0)
-speedLabel.BackgroundTransparency = 1
-speedLabel.Text = "  Speed:"
-speedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-speedLabel.TextXAlignment = Enum.TextXAlignment.Left
-speedLabel.Font = Enum.Font.SourceSansSemibold
-speedLabel.TextSize = 15
-speedLabel.Parent = speedFrame
-
-local speedBox = Instance.new("TextBox")
-speedBox.Size = UDim2.new(0.4, -5, 0.7, 0)
-speedBox.Position = UDim2.new(0.6, 0, 0.15, 0)
-speedBox.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-speedBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-speedBox.Text = "16"
-speedBox.Font = Enum.Font.SourceSans
-speedBox.TextSize = 14
-speedBox.Parent = speedFrame
-
-local boxCorner = Instance.new("UICorner")
-boxCorner.CornerRadius = UDim.new(0, 4)
-boxCorner.Parent = speedBox
-
--- Loop for Movement and Functions
+-- Background loops for toggles and functionality
 RunService.RenderStepped:Connect(function()
     local char = LocalPlayer.Character
     if not char then return end
 
-    -- Speed Adjustment
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if hum then
-        local numSpeed = tonumber(speedBox.Text)
-        if numSpeed then
-            hum.WalkSpeed = numSpeed
-        end
-    end
-
     -- Fly Movement Logic
-    if fly and char:FindFirstChild("HumanoidRootPart") and bodyVel and bodyGyro then
+    if flyOn and char:FindFirstChild("HumanoidRootPart") and flyBodyVel and flyBodyGyro then
         local cam = workspace.CurrentCamera
         local moveDir = Vector3.zero
 
@@ -181,17 +322,28 @@ RunService.RenderStepped:Connect(function()
         if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
         if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0, 1, 0) end
 
-        bodyVel.Velocity = moveDir * flySpeed
-        bodyGyro.CFrame = cam.CFrame
+        flyBodyVel.Velocity = moveDir * flySpeed
+        flyBodyGyro.CFrame = cam.CFrame
     end
+end)
 
-    -- Auto Steal Logic (Customizable per game event)
-    if autoSteal then
-        -- Add game-specific Auto Steal RemoteEvent or ProximityPrompt logic here
+-- Separate task for Auto Steal to avoid lag in RenderStepped
+task.spawn(function()
+    while true do
+        task.wait(1) -- Ang dami ng tawag sa bawat segundo (user can change this)
+        if autoStealOn then
+            callStealRemote()
+        end
     end
+end)
 
-    -- Anti Steal Logic (Customizable per game event)
-    if antiSteal then
-        -- Add game-specific Anti Steal protection logic here
+-- Separate task for Anti Steal protection logic
+task.spawn(function()
+    while true do
+        task.wait(0.5) 
+        if antiStealOn then
+            -- USER DAPAT MAGLAGAY NG LARO-SPECIFIC NA PROTEKSYON DITO.
+            -- Halimbawa: kung may proximity prompt na gamit ng iba, trigger it first.
+        end
     end
 end)
