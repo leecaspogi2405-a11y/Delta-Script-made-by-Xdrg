@@ -283,7 +283,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Fast Loop for Proximity Prompts (Steal and Harvest Only)
+-- Fast Loop for Proximity Prompts (Steal, Harvest, and Claim)
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -298,8 +298,12 @@ task.spawn(function()
                             fireproximityprompt(prompt)
                         end
 
-                        -- Trigger ONLY ProximityPrompts with "Harvest"
-                        if autoHarvestOn and actionText:find("harvest") then
+                        -- Trigger ONLY ProximityPrompts with "Harvest", "Claim", "Claim Gold Seed", or "Gold Seed"
+                        if autoHarvestOn and (
+                            actionText:find("harvest") or 
+                            actionText:find("claim") or 
+                            actionText:find("gold seed")
+                        ) then
                             fireproximityprompt(prompt)
                         end
                     end
