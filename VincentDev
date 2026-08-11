@@ -1,28 +1,75 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
--- GUI Setup
+-- ================= GUI SETUP FOR EXECUTORS =================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "XDragonHubGUI"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Safe Parenting for Delta / Mobile Executors
+local success, _ = pcall(function()
+    if gethui then
+        ScreenGui.Parent = gethui()
+    else
+        ScreenGui.Parent = game:GetService("CoreGui")
+    end
+end)
+if not success then
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
 
 -- Main Frame
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 360, 0, 520) -- Slightly taller to fit the disclaimer nicely
+MainFrame.Size = UDim2.new(0, 360, 0, 520)
 MainFrame.Position = UDim2.new(0.5, -180, 0.35, -240)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
-MainFrame.Draggable = true
 MainFrame.ClipsDescendants = false
 MainFrame.Parent = ScreenGui
 
 local FrameCorner = Instance.new("UICorner")
 FrameCorner.CornerRadius = UDim.new(0, 12)
 FrameCorner.Parent = MainFrame
+
+-- ================= CUSTOM MOBILE-FRIENDLY DRAG SCRIPT =================
+local dragging, dragInput, dragStart, startPos
+
+local function updateDrag(input)
+    local delta = input.Position - dragStart
+    MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+MainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        updateDrag(input)
+    end
+end)
+-- ====================================================================
 
 -- Background Image
 local BackgroundImage = Instance.new("ImageLabel")
@@ -84,7 +131,7 @@ local autoClaimGoldSeedOn = false
 local shieldPart = nil
 local originalTransparencies = {}
 
--- Button Creation Helper (Cyan Box Style)
+-- Button Creation Helper
 local function createCyanButton(text, pos, size)
     local btn = Instance.new("TextButton")
     btn.Size = size or UDim2.new(0.48, 0, 0, 90)
@@ -221,7 +268,6 @@ RunService.RenderStepped:Connect(function()
         local moveDir = hum.MoveDirection
 
         if moveDir.Magnitude > 0 then
-            -- Convert the flat MoveDirection into proper 3D movement based on the camera's orientation
             local flatLook = Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z).Unit
             local flatRight = Vector3.new(cam.CFrame.RightVector.X, 0, cam.CFrame.RightVector.Z).Unit
             
