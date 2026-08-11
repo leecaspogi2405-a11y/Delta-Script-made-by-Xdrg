@@ -11,7 +11,7 @@ ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 -- Main Frame
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 360, 0, 480)
+MainFrame.Size = UDim2.new(0, 360, 0, 520) -- Slightly taller to fit the disclaimer nicely
 MainFrame.Position = UDim2.new(0.5, -180, 0.35, -240)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 MainFrame.BorderSizePixel = 0
@@ -76,10 +76,10 @@ ContentContainer.Parent = MainFrame
 
 -- States
 local flyOn = false
-local autoStealOn = false
 local autoHarvestOn = false
 local antiDamageOn = false
 local invincibleOn = false
+local autoClaimGoldSeedOn = false
 
 local shieldPart = nil
 local originalTransparencies = {}
@@ -107,69 +107,30 @@ end
 
 -- ================= LEFT COLUMN =================
 local flyBtn = createCyanButton("Fly:\n[Off]", UDim2.new(0, 0, 0, 0))
-local autoStealBtn = createCyanButton("Auto Steal:\n[Off]", UDim2.new(0, 0, 0, 100))
-local autoHarvestBtn = createCyanButton("Auto Harvest:\n[Off]", UDim2.new(0, 0, 0, 200))
-local antiDamageBtn = createCyanButton("Anti Damage:\n[Off]", UDim2.new(0, 0, 0, 300))
+local autoHarvestBtn = createCyanButton("Auto Harvest:\n[Off]", UDim2.new(0, 0, 0, 100))
+local antiDamageBtn = createCyanButton("Anti Damage:\n[Off]", UDim2.new(0, 0, 0, 200))
 
 -- ================= RIGHT COLUMN =================
 local invincibleBtn = createCyanButton("Invincible:\n[Off]", UDim2.new(0.52, 0, 0, 0))
-local teleportBtn = createCyanButton("Teleport ↓", UDim2.new(0.52, 0, 0, 100), UDim2.new(0.48, 0, 0, 90))
+local autoClaimGoldSeedBtn = createCyanButton("Auto Claim\nGold Seed:\n[Off]", UDim2.new(0.52, 0, 0, 100))
 
--- ================= TELEPORT DROPDOWN MENU =================
-local tpDropdownFrame = Instance.new("Frame")
-tpDropdownFrame.Size = UDim2.new(0.48, 0, 0, 135)
-tpDropdownFrame.Position = UDim2.new(0.52, 0, 0, 195)
-tpDropdownFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-tpDropdownFrame.Visible = false
-tpDropdownFrame.ZIndex = 10
-tpDropdownFrame.Parent = ContentContainer
-
-local dropCorner = Instance.new("UICorner")
-dropCorner.CornerRadius = UDim.new(0, 8)
-dropCorner.Parent = tpDropdownFrame
-
-local tpListLayout = Instance.new("UIListLayout")
-tpListLayout.Parent = tpDropdownFrame
-tpListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-tpListLayout.Padding = UDim.new(0, 5)
-
-local function createTpOption(text, order, targetCFrame)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 40)
-    btn.BackgroundColor3 = Color3.fromRGB(0, 180, 180)
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Text = text
-    btn.Font = Enum.Font.SourceSansBold
-    btn.TextSize = 16
-    btn.LayoutOrder = order
-    btn.ZIndex = 11
-    btn.Parent = tpDropdownFrame
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 6)
-    corner.Parent = btn
-
-    btn.MouseButton1Click:Connect(function()
-        local char = LocalPlayer.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            char.HumanoidRootPart.CFrame = targetCFrame
-        end
-    end)
-end
-
--- Teleport Options (Selection, Gear Shop, Props Shop)
-createTpOption("Selection", 1, CFrame.new(0, 10, 0))
-createTpOption("Gear Shop", 2, CFrame.new(100, 10, 50))
-createTpOption("Props Shop", 3, CFrame.new(150, 10, -50))
-
-teleportBtn.MouseButton1Click:Connect(function()
-    tpDropdownFrame.Visible = not tpDropdownFrame.Visible
-    teleportBtn.Text = tpDropdownFrame.Visible and "Teleport ↑" or "Teleport ↓"
-end)
+-- ================= DISCLAIMER TEXT =================
+local DisclaimerText = Instance.new("TextLabel")
+DisclaimerText.Size = UDim2.new(1, 0, 0, 120)
+DisclaimerText.Position = UDim2.new(0, 0, 0, 310)
+DisclaimerText.BackgroundTransparency = 1
+DisclaimerText.Text = "DISCLAIMER: This Script Made By Dev Xdragon, The Other May Not Working To Get More Better Performance Download the Xdragon.Hub v2\n\nCredit: Dev Xdragon, Vincent Magtolis, Summere Castrence\n\nThank you for using Xdragon.Hub v1"
+DisclaimerText.TextColor3 = Color3.fromRGB(200, 200, 200)
+DisclaimerText.TextSize = 13
+DisclaimerText.Font = Enum.Font.SourceSansBold
+DisclaimerText.TextWrapped = true
+DisclaimerText.TextYAlignment = Enum.TextYAlignment.Top
+DisclaimerText.ZIndex = 2
+DisclaimerText.Parent = ContentContainer
 
 -- ================= TOGGLES & MECHANICS =================
 
--- 1. Fly Logic (Joystick Movement Compatible)
+-- 1. Fly Logic (True 3D Camera Direction)
 local flySpeed = 50
 local flyBodyVel, flyBodyGyro
 
@@ -197,19 +158,19 @@ flyBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- 2. Auto Steal Toggle
-autoStealBtn.MouseButton1Click:Connect(function()
-    autoStealOn = not autoStealOn
-    autoStealBtn.Text = "Auto Steal:\n" .. (autoStealOn and "[On]" or "[Off]")
-end)
-
--- 3. Auto Harvest Toggle
+-- 2. Auto Harvest Toggle
 autoHarvestBtn.MouseButton1Click:Connect(function()
     autoHarvestOn = not autoHarvestOn
     autoHarvestBtn.Text = "Auto Harvest:\n" .. (autoHarvestOn and "[On]" or "[Off]")
 end)
 
--- 4. Invincible Toggle (Invisible Character: Transparency = 1)
+-- 3. Auto Claim Gold Seed Toggle
+autoClaimGoldSeedBtn.MouseButton1Click:Connect(function()
+    autoClaimGoldSeedOn = not autoClaimGoldSeedOn
+    autoClaimGoldSeedBtn.Text = "Auto Claim\nGold Seed:\n" .. (autoClaimGoldSeedOn and "[On]" or "[Off]")
+end)
+
+-- 4. Invincible Toggle
 invincibleBtn.MouseButton1Click:Connect(function()
     invincibleOn = not invincibleOn
     invincibleBtn.Text = "Invincible:\n" .. (invincibleOn and "[On]" or "[Off]")
@@ -234,7 +195,7 @@ invincibleBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- 5. Anti Damage Shield (Invisible Anchored Ring Part Around Player)
+-- 5. Anti Damage Shield
 antiDamageBtn.MouseButton1Click:Connect(function()
     antiDamageOn = not antiDamageOn
     antiDamageBtn.Text = "Anti Damage:\n" .. (antiDamageOn and "[On]" or "[Off]")
@@ -254,27 +215,35 @@ RunService.RenderStepped:Connect(function()
     local hrp = char.HumanoidRootPart
     local hum = char:FindFirstChildOfClass("Humanoid")
 
-    -- Fly Joystick Movement
+    -- Fixed Fly Joystick Movement (Camera-based)
     if flyOn and flyBodyVel and flyBodyGyro and hum then
         local cam = workspace.CurrentCamera
         local moveDir = hum.MoveDirection
 
         if moveDir.Magnitude > 0 then
-            flyBodyVel.Velocity = cam.CFrame:VectorToWorldSpace(cam.CFrame:VectorToObjectSpace(moveDir)) * flySpeed
+            -- Convert the flat MoveDirection into proper 3D movement based on the camera's orientation
+            local flatLook = Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z).Unit
+            local flatRight = Vector3.new(cam.CFrame.RightVector.X, 0, cam.CFrame.RightVector.Z).Unit
+            
+            local forwardInput = moveDir:Dot(flatLook)
+            local rightInput = moveDir:Dot(flatRight)
+            
+            local flightVector = (cam.CFrame.LookVector * forwardInput) + (cam.CFrame.RightVector * rightInput)
+            flyBodyVel.Velocity = flightVector * flySpeed
         else
             flyBodyVel.Velocity = Vector3.zero
         end
         flyBodyGyro.CFrame = cam.CFrame
     end
 
-    -- Anti Damage Barrier Part (Anchored around Player)
+    -- Anti Damage Barrier Part
     if antiDamageOn then
         if not shieldPart or not shieldPart.Parent then
             shieldPart = Instance.new("Part")
             shieldPart.Name = "AntiDamagePart"
             shieldPart.Shape = Enum.PartType.Cylinder
             shieldPart.Size = Vector3.new(12, 10, 10)
-            shieldPart.Transparency = 1 -- Fully Invisible
+            shieldPart.Transparency = 1 
             shieldPart.CanCollide = true
             shieldPart.Anchored = true
             shieldPart.Parent = workspace
@@ -283,28 +252,26 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Fast Loop for Proximity Prompts (Steal, Harvest, and Claim)
+-- Fast Loop for Proximity Prompts
 task.spawn(function()
     while true do
         task.wait(0.1)
-        if autoStealOn or autoHarvestOn then
+        if autoHarvestOn or autoClaimGoldSeedOn then
             pcall(function()
                 for _, prompt in pairs(workspace:GetDescendants()) do
                     if prompt:IsA("ProximityPrompt") then
                         local actionText = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
 
-                        -- Trigger ONLY ProximityPrompts with "Steal"
-                        if autoStealOn and actionText:find("steal") then
+                        -- Harvest
+                        if autoHarvestOn and actionText:find("harvest") then
                             fireproximityprompt(prompt)
                         end
 
-                        -- Trigger ONLY ProximityPrompts with "Harvest", "Claim", "Claim Gold Seed", or "Gold Seed"
-                        if autoHarvestOn and (
-                            actionText:find("harvest") or 
-                            actionText:find("claim") or 
-                            actionText:find("gold seed")
-                        ) then
-                            fireproximityprompt(prompt)
+                        -- Claim, Claim Gold Seed, Gold Seed
+                        if autoClaimGoldSeedOn then
+                            if actionText:find("claim") or actionText:find("gold seed") then
+                                fireproximityprompt(prompt)
+                            end
                         end
                     end
                 end
