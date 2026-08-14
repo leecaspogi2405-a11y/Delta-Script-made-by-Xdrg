@@ -91,14 +91,14 @@ local TitleCorner = Instance.new("UICorner")
 TitleCorner.CornerRadius = UDim.new(0, 12)
 TitleCorner.Parent = TitleFrame
 
--- Logo Image
-local LogoImage = Instance.new("ImageLabel")
-LogoImage.Size = UDim2.new(0, 38, 0, 38)
-LogoImage.Position = UDim2.new(0.04, 0, 0.5, -19)
-LogoImage.BackgroundTransparency = 1
-LogoImage.Image = "rbxassetid://1511976415632031754"
-LogoImage.ZIndex = 3
-LogoImage.Parent = TitleFrame
+-- Logo Button (Click to maximize when minimized)
+local LogoButton = Instance.new("ImageButton")
+LogoButton.Size = UDim2.new(0, 38, 0, 38)
+LogoButton.Position = UDim2.new(0.04, 0, 0.5, -19)
+LogoButton.BackgroundTransparency = 1
+LogoButton.Image = "rbxassetid://1511976415632031754"
+LogoButton.ZIndex = 3
+LogoButton.Parent = TitleFrame
 
 -- Title Text
 local TitleText = Instance.new("TextLabel")
@@ -113,23 +113,98 @@ TitleText.TextXAlignment = Enum.TextXAlignment.Left
 TitleText.ZIndex = 3
 TitleText.Parent = TitleFrame
 
--- Content Frame
-local ContentContainer = Instance.new("Frame")
+-- Content Scrolling Frame (Replaces Static Frame)
+local ContentContainer = Instance.new("ScrollingFrame")
 ContentContainer.Size = UDim2.new(1, -20, 1, -60)
 ContentContainer.Position = UDim2.new(0, 10, 0, 55)
 ContentContainer.BackgroundTransparency = 1
+ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 650)
+ContentContainer.ScrollBarThickness = 4
 ContentContainer.ZIndex = 2
 ContentContainer.Parent = MainFrame
 
--- States
+-- ================= MINIMIZE LOGIC =================
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+MinimizeBtn.Position = UDim2.new(1, -40, 0.5, -15)
+MinimizeBtn.BackgroundTransparency = 1
+MinimizeBtn.Text = "-"
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.TextSize = 28
+MinimizeBtn.Font = Enum.Font.SourceSansBold
+MinimizeBtn.ZIndex = 4
+MinimizeBtn.Parent = TitleFrame
+
+local isMinimized = false
+local originalSize = MainFrame.Size
+local originalTitleSize = TitleFrame.Size
+
+local function toggleMinimize()
+    isMinimized = not isMinimized
+    if isMinimized then
+        -- Shrink to small circle
+        MainFrame.Size = UDim2.new(0, 50, 0, 50)
+        TitleFrame.Size = UDim2.new(1, 0, 1, 0)
+        TitleCorner.CornerRadius = UDim.new(1, 0)
+        FrameCorner.CornerRadius = UDim.new(1, 0)
+        
+        TitleText.Visible = false
+        MinimizeBtn.Visible = false
+        ContentContainer.Visible = false
+        BackgroundImage.Visible = false
+        
+        LogoButton.Position = UDim2.new(0.5, -19, 0.5, -19)
+    else
+        -- Expand to normal size
+        MainFrame.Size = originalSize
+        TitleFrame.Size = originalTitleSize
+        TitleCorner.CornerRadius = UDim.new(0, 12)
+        FrameCorner.CornerRadius = UDim.new(0, 12)
+        
+        TitleText.Visible = true
+        MinimizeBtn.Visible = true
+        ContentContainer.Visible = true
+        BackgroundImage.Visible = true
+        
+        LogoButton.Position = UDim2.new(0.04, 0, 0.5, -19)
+    end
+end
+
+MinimizeBtn.MouseButton1Click:Connect(toggleMinimize)
+LogoButton.MouseButton1Click:Connect(function()
+    if isMinimized then toggleMinimize() end
+end)
+
+-- ================= STATES & DATA =================
 local flyOn = false
 local autoHarvestOn = false
 local antiDamageOn = false
 local invincibleOn = false
 local autoClaimGoldSeedOn = false
+local autoStealOn = false
+local autoBuyOn = false
 
 local shieldPart = nil
 local originalTransparencies = {}
+
+-- Auto Buy Shop Data
+local ShopData = {
+    ["Garden Valley Seeds"] = { Type = "Seeds", Items = {"Carrot", "Strawberry", "Blueberry", "Tulip", "Tomato", "Apple", "Bamboo", "Corn", "Cactus", "Pineapple", "Mushroom", "Green Bean", "Banana Grape", "Coconut", "Mango", "Dragon Fruit", "Acorn", "Cherry", "Sunflower", "Fire Fern", "Venus Flytrap", "Pomegranate", "Poison Apple", "Venom Spitter", "Briar Rose", "Moon Bloom", "Sun Bloom", "Hypno Bloom", "Dragon's Breath", "Star Fruit"} },
+    ["Fall Event Seeds"] = { Type = "Seeds", Items = {"Maple Carrot", "Maple Strawberry", "Maple Blueberry", "Maple Tulip", "Maple Tomato", "Maple Apple", "Maple Bamboo", "Maple Corn", "Maple Cactus", "Maple Pineapple", "Maple Mushroom", "Maple Green Bean", "Maple Banana", "Maple Grape", "Maple Coconut", "Maple Mango", "Maple Dragon Fruit", "Maple Acorn", "Maple Cherry", "Maple Sunflower", "Maple Venus Fly Trap", "Maple Pomegranate", "Maple Poison Apple", "Maple Venom Spitter", "Atlantic Giant Pumpkin", "Conifer Cone", "Amber Cranberry"} },
+    ["Garden Valley Gears"] = { Type = "Gears", Items = {"Common Sprinkler", "Common Watering Can", "Uncommon Sprinkler", "Rare Sprinkler", "Trowel", "Jump Mushroom", "Shrink Mushroom", "Speed Mushroom", "Supersize Mushroom", "Gnome", "Flashbang", "Basic Pot", "Legendary Sprinkler", "Invisibility Mushroom", "Super Watering Can", "Super Sprinkler"} },
+    ["Fall Event Gears"] = { Type = "Gears", Items = {"Syrup Sprinkler", "Syrup Watering Can", "Rare Magic Mail", "Harp", "Legendary Magic Mail", "Super Magic Mail", "Super Syrup Watering Can", "Super Syrup Sprinkler", "Bull Horn", "Wind Staff"} },
+    ["Garden Valley Crates"] = { Type = "Crates", Items = {"Ladder Crate", "Bench Crate", "Light Crate", "Sign Crate", "Arch Crate", "Roleplay Crate", "Picture Frame Crate", "Fourth Of July Crate", "Bridge Crate", "Spring Crate", "Seesaw Crate", "Conveyor Crate", "Boombox Crate", "Owner Door Crate", "Fence Crate", "Teleporter Crate"} },
+    ["Fall Event Crates"] = { Type = "Crates", Items = {"Rake Crate", "Lantern Crate", "Fall Structure Crate", "Fall Cosmetic Crate", "Cobblestone Crate"} }
+}
+local CategoryNames = {
+    "Garden Valley Seeds", "Fall Event Seeds", 
+    "Garden Valley Gears", "Fall Event Gears", 
+    "Garden Valley Crates", "Fall Event Crates"
+}
+
+local currentCategory = nil
+local currentInternalType = nil
+local currentItem = nil
 
 -- Button Creation Helper
 local function createCyanButton(text, pos, size)
@@ -152,21 +227,136 @@ local function createCyanButton(text, pos, size)
     return btn
 end
 
--- ================= LEFT COLUMN =================
+-- ================= ROW 1 =================
 local flyBtn = createCyanButton("Fly:\n[Off]", UDim2.new(0, 0, 0, 0))
-local autoHarvestBtn = createCyanButton("Auto Harvest:\n[Off]", UDim2.new(0, 0, 0, 100))
-local antiDamageBtn = createCyanButton("Anti Damage:\n[Off]", UDim2.new(0, 0, 0, 200))
-
--- ================= RIGHT COLUMN =================
 local invincibleBtn = createCyanButton("Invincible:\n[Off]", UDim2.new(0.52, 0, 0, 0))
+-- ================= ROW 2 =================
+local autoHarvestBtn = createCyanButton("Auto Harvest:\n[Off]", UDim2.new(0, 0, 0, 100))
 local autoClaimGoldSeedBtn = createCyanButton("Auto Claim\nGold Seed:\n[Off]", UDim2.new(0.52, 0, 0, 100))
+-- ================= ROW 3 =================
+local antiDamageBtn = createCyanButton("Anti Damage:\n[Off]", UDim2.new(0, 0, 0, 200))
+local autoStealBtn = createCyanButton("Auto Steal:\n[Off]", UDim2.new(0.52, 0, 0, 200))
+
+-- ================= AUTO BUY SECTION =================
+local autoBuyBtn = createCyanButton("Auto Buy:\n[Off]", UDim2.new(0, 0, 0, 300), UDim2.new(1, 0, 0, 50))
+local categoryBtn = createCyanButton("Shop Category:\nNone", UDim2.new(0, 0, 0, 360), UDim2.new(1, 0, 0, 50))
+local itemBtn = createCyanButton("Select Item:\nNone", UDim2.new(0, 0, 0, 420), UDim2.new(1, 0, 0, 50))
+
+-- ================= POPUP MENU SYSTEM =================
+local PopupFrame = Instance.new("Frame")
+PopupFrame.Size = UDim2.new(0, 300, 0, 400)
+PopupFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
+PopupFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+PopupFrame.Visible = false
+PopupFrame.ZIndex = 10
+PopupFrame.Parent = ScreenGui
+
+local PopupCorner = Instance.new("UICorner")
+PopupCorner.CornerRadius = UDim.new(0, 12)
+PopupCorner.Parent = PopupFrame
+
+local PopupTitle = Instance.new("TextLabel")
+PopupTitle.Size = UDim2.new(1, 0, 0, 40)
+PopupTitle.BackgroundTransparency = 1
+PopupTitle.Text = "Select Option"
+PopupTitle.TextColor3 = Color3.fromRGB(0, 220, 220)
+PopupTitle.TextSize = 20
+PopupTitle.Font = Enum.Font.SourceSansBold
+PopupTitle.ZIndex = 11
+PopupTitle.Parent = PopupFrame
+
+local ClosePopupBtn = Instance.new("TextButton")
+ClosePopupBtn.Size = UDim2.new(0, 30, 0, 30)
+ClosePopupBtn.Position = UDim2.new(1, -35, 0, 5)
+ClosePopupBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+ClosePopupBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ClosePopupBtn.Text = "X"
+ClosePopupBtn.Font = Enum.Font.SourceSansBold
+ClosePopupBtn.TextSize = 18
+ClosePopupBtn.ZIndex = 11
+ClosePopupBtn.Parent = PopupFrame
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 6)
+CloseCorner.Parent = ClosePopupBtn
+
+local PopupScroll = Instance.new("ScrollingFrame")
+PopupScroll.Size = UDim2.new(1, -20, 1, -50)
+PopupScroll.Position = UDim2.new(0, 10, 0, 40)
+PopupScroll.BackgroundTransparency = 1
+PopupScroll.ScrollBarThickness = 4
+PopupScroll.ZIndex = 11
+PopupScroll.Parent = PopupFrame
+
+local PopupLayout = Instance.new("UIListLayout")
+PopupLayout.Padding = UDim.new(0, 5)
+PopupLayout.Parent = PopupScroll
+
+ClosePopupBtn.MouseButton1Click:Connect(function()
+    PopupFrame.Visible = false
+end)
+
+local function openPopup(title, options, callback)
+    -- Clear old options
+    for _, child in pairs(PopupScroll:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    
+    PopupTitle.Text = title
+    local contentHeight = 0
+    
+    for _, opt in ipairs(options) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, 0, 0, 35)
+        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.Text = opt
+        btn.Font = Enum.Font.SourceSansSemibold
+        btn.TextSize = 16
+        btn.ZIndex = 11
+        btn.Parent = PopupScroll
+        
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 6)
+        corner.Parent = btn
+        
+        btn.MouseButton1Click:Connect(function()
+            PopupFrame.Visible = false
+            callback(opt)
+        end)
+        contentHeight = contentHeight + 40
+    end
+    
+    PopupScroll.CanvasSize = UDim2.new(0, 0, 0, contentHeight)
+    PopupFrame.Visible = true
+end
+
+categoryBtn.MouseButton1Click:Connect(function()
+    openPopup("Select Shop Category", CategoryNames, function(selected)
+        currentCategory = selected
+        currentInternalType = ShopData[selected].Type
+        categoryBtn.Text = "Shop Category:\n" .. selected
+        
+        -- Reset Item
+        currentItem = nil
+        itemBtn.Text = "Select Item:\nNone"
+    end)
+end)
+
+itemBtn.MouseButton1Click:Connect(function()
+    if not currentCategory then return end
+    openPopup("Select Item", ShopData[currentCategory].Items, function(selected)
+        currentItem = selected
+        itemBtn.Text = "Select Item:\n" .. selected
+    end)
+end)
 
 -- ================= DISCLAIMER TEXT =================
 local DisclaimerText = Instance.new("TextLabel")
 DisclaimerText.Size = UDim2.new(1, 0, 0, 120)
-DisclaimerText.Position = UDim2.new(0, 0, 0, 310)
+DisclaimerText.Position = UDim2.new(0, 0, 0, 490)
 DisclaimerText.BackgroundTransparency = 1
-DisclaimerText.Text = "DISCLAIMER: This Script Made By Dev Xdragon, The Other May Not Working To Get More Better Performance Download the Xdragon.Hub v2\n\nCredit: Dev Xdragon, Vincent Magtolis, Summere Castrence\n\nThank you for using Xdragon.Hub v1"
+DisclaimerText.Text = "DISCLAIMER: This Script Made By Dev Xdragon, The Other May Not Working To Get More Better Performance Download the Xdragon.Hub v2\n\nCredit: Dev Xdragon, Vincent Magtolis, Summere Castrence, Charles Mendoza\n\nThank you for using Xdragon.Hub v1"
 DisclaimerText.TextColor3 = Color3.fromRGB(200, 200, 200)
 DisclaimerText.TextSize = 13
 DisclaimerText.Font = Enum.Font.SourceSansBold
@@ -177,10 +367,9 @@ DisclaimerText.Parent = ContentContainer
 
 -- ================= TOGGLES & MECHANICS =================
 
--- 1. Fly Logic (True 3D Camera Direction)
+-- Fly
 local flySpeed = 50
 local flyBodyVel, flyBodyGyro
-
 flyBtn.MouseButton1Click:Connect(function()
     flyOn = not flyOn
     flyBtn.Text = "Fly:\n" .. (flyOn and "[On]" or "[Off]")
@@ -205,19 +394,28 @@ flyBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- 2. Auto Harvest Toggle
+-- Simple Toggles
 autoHarvestBtn.MouseButton1Click:Connect(function()
     autoHarvestOn = not autoHarvestOn
     autoHarvestBtn.Text = "Auto Harvest:\n" .. (autoHarvestOn and "[On]" or "[Off]")
 end)
 
--- 3. Auto Claim Gold Seed Toggle
 autoClaimGoldSeedBtn.MouseButton1Click:Connect(function()
     autoClaimGoldSeedOn = not autoClaimGoldSeedOn
     autoClaimGoldSeedBtn.Text = "Auto Claim\nGold Seed:\n" .. (autoClaimGoldSeedOn and "[On]" or "[Off]")
 end)
 
--- 4. Invincible Toggle
+autoStealBtn.MouseButton1Click:Connect(function()
+    autoStealOn = not autoStealOn
+    autoStealBtn.Text = "Auto Steal:\n" .. (autoStealOn and "[On]" or "[Off]")
+end)
+
+autoBuyBtn.MouseButton1Click:Connect(function()
+    autoBuyOn = not autoBuyOn
+    autoBuyBtn.Text = "Auto Buy:\n" .. (autoBuyOn and "[On]" or "[Off]")
+end)
+
+-- Invincible
 invincibleBtn.MouseButton1Click:Connect(function()
     invincibleOn = not invincibleOn
     invincibleBtn.Text = "Invincible:\n" .. (invincibleOn and "[On]" or "[Off]")
@@ -242,7 +440,7 @@ invincibleBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- 5. Anti Damage Shield
+-- Anti Damage Shield
 antiDamageBtn.MouseButton1Click:Connect(function()
     antiDamageOn = not antiDamageOn
     antiDamageBtn.Text = "Anti Damage:\n" .. (antiDamageOn and "[On]" or "[Off]")
@@ -255,14 +453,14 @@ end)
 
 -- ================= MAIN LOOPS =================
 
--- Frame Loop for Movement & Shield
+-- Frame Loop (Movement & Shield)
 RunService.RenderStepped:Connect(function()
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hrp = char.HumanoidRootPart
     local hum = char:FindFirstChildOfClass("Humanoid")
 
-    -- Fixed Fly Joystick Movement (Camera-based)
+    -- Fly Mechanics
     if flyOn and flyBodyVel and flyBodyGyro and hum then
         local cam = workspace.CurrentCamera
         local moveDir = hum.MoveDirection
@@ -282,7 +480,7 @@ RunService.RenderStepped:Connect(function()
         flyBodyGyro.CFrame = cam.CFrame
     end
 
-    -- Anti Damage Barrier Part
+    -- Anti Damage Shield Mechanics
     if antiDamageOn then
         if not shieldPart or not shieldPart.Parent then
             shieldPart = Instance.new("Part")
@@ -298,27 +496,53 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Fast Loop for Proximity Prompts
+-- Fast Loop (Proximity Prompts)
 task.spawn(function()
     while true do
         task.wait(0.1)
-        if autoHarvestOn or autoClaimGoldSeedOn then
+        if autoHarvestOn or autoClaimGoldSeedOn or autoStealOn then
             pcall(function()
                 for _, prompt in pairs(workspace:GetDescendants()) do
                     if prompt:IsA("ProximityPrompt") then
                         local actionText = (prompt.ActionText .. " " .. prompt.ObjectText):lower()
 
-                        -- Harvest
                         if autoHarvestOn and actionText:find("harvest") then
                             fireproximityprompt(prompt)
                         end
 
-                        -- Claim, Claim Gold Seed, Gold Seed
-                        if autoClaimGoldSeedOn then
-                            if actionText:find("claim") or actionText:find("gold seed") then
-                                fireproximityprompt(prompt)
-                            end
+                        if autoClaimGoldSeedOn and (actionText:find("claim") or actionText:find("gold seed")) then
+                            fireproximityprompt(prompt)
                         end
+                        
+                        if autoStealOn and actionText:find("steal") then
+                            fireproximityprompt(prompt)
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- Auto Buy System Loop
+task.spawn(function()
+    while true do
+        task.wait(0.5) -- Fires every 0.5s to prevent immediate crashing
+        if autoBuyOn and currentInternalType and currentItem then
+            pcall(function()
+                local Remote = game:GetService("ReplicatedStorage"):FindFirstChild("RemoteEvents")
+                if Remote and Remote:FindFirstChild("ReplicaSet") then
+                    -- Fires the exact structure you provided
+                    if firesignal then
+                        firesignal(Remote.ReplicaSet.OnClientEvent, table.unpack({
+                            [1] = 1,
+                            [2] = {
+                                [1] = "PurchasedThisRestock",
+                                [2] = currentInternalType,
+                                [3] = currentItem,
+                            },
+                            [3] = 20,
+                        }))
                     end
                 end
             end)
