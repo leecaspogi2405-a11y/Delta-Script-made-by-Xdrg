@@ -515,7 +515,7 @@ task.spawn(function()
                 local remote = getReplicaSet()
                 if not remote then return end
                 for _, targetItem in ipairs(ActiveBuyList) do
-                    firesignal(remote.OnClientEvent, table.unpack({
+                    local payload = {
                         [1] = 1,
                         [2] = {
                             [1] = "PurchasedThisRestock",
@@ -523,7 +523,9 @@ task.spawn(function()
                             [3] = targetItem.Item,
                         },
                         [3] = 20,
-                    }))
+                    }
+                    remote:FireServer(table.unpack(payload))
+                    firesignal(remote.OnClientEvent, table.unpack(payload))
                     task.wait(0.05)
                 end
             end)
