@@ -1,0 +1,83 @@
+(Only in Garden Valley Seeds)
+local Remote = game:GetService("ReplicatedStorage").RemoteEvents.ReplicaSet
+firesignal(Remote.OnClientEvent, table.unpack({
+[1] = 1,
+[2] = {
+[1] = "PurchasedThisRestock",
+[2] = "Seeds",
+[3] = "Carrot",
+},
+[3] = 20,
+}))
+
+And so on like Strawberry, Blueberry, Tulip, Tomato, Apple, Bamboo, Corn, Cactus, Pineapple, Mushroom, Green Bean, Banana Grape, Coconut, Mango, Dragon Fruit, Acorn, Cherry, Sunflower, Fire Fern, Venus Flytrap, Pomegranate, Poison Apple, Venom Spitter, Briar Rose, Moon Bloom, Sun Bloom,Hypno Bloom, Dragon's Breath, Star Fruit,<-this is only for seed in garden valley
+
+Only in (Fall  Event Seeds) ↓
+local Remote = game:GetService("ReplicatedStorage").RemoteEvents.ReplicaSet
+firesignal(Remote.OnClientEvent, table.unpack({
+[1] = 1,
+[2] = {
+[1] = "PurchasedThisRestock",
+[2] = "Seeds",
+[3] = "Maple Carrot",
+},
+[3] = 20,
+}))
+
+And so on like Maple Strawberry, Maple Blueberry, Maple Tulip, Maple Tomato, Maple Apple, Maple Bamboo, Maple Corn, Maple Cactus, Maple Pineapple, Maple Mushroom, Maple Green Bean, Maple Banana, Maple Grape, Maple Coconut, Maple Mango, Maple Dragon Fruit, Maple Acorn, Maple Cherry, Maple Sunflower, Maple Venus Fly Trap, Maple Pomegranate, Maple Poison Apple, Maple Venom Spitter, Atlantic Giant Pumpkin, Conifer Cone, Amber Cranberry,<-only for Fall Event.
+
+Only in (Garden Valley Gears) ↓
+local Remote = game:GetService("ReplicatedStorage").RemoteEvents.ReplicaSet
+firesignal(Remote.OnClientEvent, table.unpack({
+[1] = 1,
+[2] = {
+[1] = "PurchasedThisRestock",
+[2] = "Gears",
+[3] = "Common Sprinkler",
+},
+[3] = 20,
+}))
+
+And so on like Common Watering Can, Uncommon Sprinkler, Rare Sprinkler, Trowel, Jump Mushroom, Shrink Mushroom, Speed Mushroom, Supersize Mushroom, Gnome, Flashbang, Basic Pot, Legendary Sprinkler, Invisibility Mushroom, Super Watering Can, Super Sprinkler,<-only in garden valley Gears
+
+Only for (Fall Event Gears) ↓
+local Remote = game:GetService("ReplicatedStorage").RemoteEvents.ReplicaSet
+firesignal(Remote.OnClientEvent, table.unpack({
+[1] = 1,
+[2] = {
+[1] = "PurchasedThisRestock",
+[2] = "Gears",
+[3] = "Syrup Sprinkler",
+},
+[3] = 20,
+}))
+
+And so on like Syrup Watering Can, Rare Magic Mail, Harp, Legendary Magic Mail, Super Magic Mail, Super Syrup Watering Can, Super Syrup Sprinkler, Bull Horn, Wind Staff,<-only for Fall Event Gears
+
+Only in (Garden Valley Crates) ↓
+local Remote = game:GetService("ReplicatedStorage").RemoteEvents.ReplicaSet
+firesignal(Remote.OnClientEvent, table.unpack({
+[1] = 1,
+[2] = {
+[1] = "PurchasedThisRestock",
+[2] = "Crates",
+[3] = "Ladder Crate",
+},
+[3] = 20,
+}))
+
+And so on like Bench Crate, Light Crate, Sign Crate, Arch Crate, Roleplay Crate, Picture Frame Crate, Fourth Of July Crate, Bridge Crate, Spring Crate, Seesaw Crate, Conveyor Crate, Boombox Crate, Owner Door Crate, Fence Crate, Teleporter Crate,<-only in Garden Valley Crates
+
+Only in (Fall Event Crates) ↓
+local Remote = game:GetService("ReplicatedStorage").RemoteEvents.ReplicaSet
+firesignal(Remote.OnClientEvent, table.unpack({
+[1] = 1,
+[2] = {
+[1] = "PurchasedThisRestock",
+[2] = "Crates",
+[3] = "Rake Crate",
+},
+[3] = 20,
+}))
+
+And so on like Lantern Crate, Fall Structure Crate, Fall Cosmetic Crate, Cobblestone Crate,<-only in Fall Event.
