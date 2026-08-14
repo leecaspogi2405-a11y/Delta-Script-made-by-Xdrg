@@ -4,6 +4,15 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
+-- ================= NETWORKING =================
+local Net = (function()
+    local ok, m = pcall(function()
+        return require(ReplicatedStorage.SharedModules.Networking)
+    end)
+    return ok and m or nil
+end)()
+
+-- ================= GUI SETUP =================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "XDragonHubGUI"
 ScreenGui.ResetOnSpawn = false
@@ -34,6 +43,7 @@ local FrameCorner = Instance.new("UICorner")
 FrameCorner.CornerRadius = UDim.new(0, 12)
 FrameCorner.Parent = MainFrame
 
+-- Custom Mobile-Friendly Drag
 local dragging, dragInput, dragStart, startPos
 
 local function updateDrag(input)
@@ -113,6 +123,7 @@ ContentContainer.ScrollBarThickness = 4
 ContentContainer.ZIndex = 2
 ContentContainer.Parent = MainFrame
 
+-- ================= MINIMIZE TO CIRCLE LOGIC =================
 local isMinimized = false
 local originalSize = MainFrame.Size
 local originalTitleSize = TitleFrame.Size
@@ -141,6 +152,7 @@ local function toggleMinimize()
 end
 LogoButton.MouseButton1Click:Connect(toggleMinimize)
 
+-- ================= DATA & VARIABLES =================
 local flyOn, autoHarvestOn, antiDamageOn, invincibleOn, autoClaimGoldSeedOn, autoStealOn, autoBuyOn = false, false, false, false, false, false, false
 local shieldPart, originalTransparencies = nil, {}
 local flyBodyVel, flyBodyGyro = nil, nil
@@ -174,6 +186,7 @@ local function updateActiveBuyList()
     end
 end
 
+-- ================= UI BUTTON BUILDER =================
 local function createCyanButton(text, pos, size)
     local btn = Instance.new("TextButton")
     btn.Size = size or UDim2.new(0.48, 0, 0, 90)
@@ -215,6 +228,7 @@ DisclaimerText.TextYAlignment = Enum.TextYAlignment.Top
 DisclaimerText.ZIndex = 2
 DisclaimerText.Parent = ContentContainer
 
+-- ================= MULTI-SELECT POPUP SYSTEM =================
 local PopupFrame = Instance.new("Frame")
 PopupFrame.Size = UDim2.new(0, 320, 0, 420)
 PopupFrame.Position = UDim2.new(0.5, -160, 0.5, -210)
@@ -367,6 +381,8 @@ setupAutoBuyBtn.MouseButton1Click:Connect(function()
     openCategoryMenu()
 end)
 
+-- ================= TOGGLE MECHANICS =================
+
 flyBtn.MouseButton1Click:Connect(function()
     flyOn = not flyOn
     flyBtn.Text = "Fly:\n" .. (flyOn and "[On]" or "[Off]")
@@ -441,6 +457,7 @@ antiDamageBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- ================= MAIN LOOPS =================
 local flySpeed = 50
 RunService.RenderStepped:Connect(function()
     local char = LocalPlayer.Character
@@ -501,31 +518,25 @@ task.spawn(function()
     end
 end)
 
-local function getReplicaSet()
-    local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
-    if not remoteEvents then return nil end
-    return remoteEvents:FindFirstChild("ReplicaSet")
-end
-
+-- ================= AUTO BUY (FIXED - uses proper Net remotes) =================
 task.spawn(function()
     while true do
         task.wait(0.3)
         if autoBuyOn and #ActiveBuyList > 0 then
             pcall(function()
-                local remote = getReplicaSet()
-                if not remote then return end
+                if not Net then return end
                 for _, targetItem in ipairs(ActiveBuyList) do
-                    local payload = {
-                        [1] = 1,
-                        [2] = {
-                            [1] = "PurchasedThisRestock",
-                            [2] = targetItem.Type,
-                            [3] = targetItem.Item,
-                        },
-                        [3] = 20,
-                    }
-                    remote:FireServer(table.unpack(payload))
-                    firesignal(remote.OnClientEvent, table.unpack(payload))
+                    local itemType = targetItem.Type
+                    local itemName = targetItem.Item
+                    
+                    if itemType == "Seeds" and Net.SeedShop and Net.SeedShop.PurchaseSeed then
+                        Net.SeedShop.PurchaseSeed:Fire(itemName)
+                    elseif itemType == "Gears" and Net.GearShop and Net.GearShop.PurchaseGear then
+                        Net.GearShop.PurchaseGear:Fire(itemName)
+                    elseif itemType == "Crates" and Net.CrateShop and Net.CrateShop.PurchaseCrate then
+                        Net.CrateShop.PurchaseCrate:Fire(itemName)
+                    end
+                    
                     task.wait(0.05)
                 end
             end)
