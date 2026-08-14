@@ -113,7 +113,7 @@ TitleText.TextXAlignment = Enum.TextXAlignment.Left
 TitleText.ZIndex = 3
 TitleText.Parent = TitleFrame
 
--- Content Scrolling Frame (Replaces Static Frame)
+-- Content Scrolling Frame
 local ContentContainer = Instance.new("ScrollingFrame")
 ContentContainer.Size = UDim2.new(1, -20, 1, -60)
 ContentContainer.Position = UDim2.new(0, 10, 0, 55)
@@ -297,7 +297,6 @@ ClosePopupBtn.MouseButton1Click:Connect(function()
 end)
 
 local function openPopup(title, options, callback)
-    -- Clear old options
     for _, child in pairs(PopupScroll:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
     end
@@ -336,8 +335,6 @@ categoryBtn.MouseButton1Click:Connect(function()
         currentCategory = selected
         currentInternalType = ShopData[selected].Type
         categoryBtn.Text = "Shop Category:\n" .. selected
-        
-        -- Reset Item
         currentItem = nil
         itemBtn.Text = "Select Item:\nNone"
     end)
@@ -367,9 +364,6 @@ DisclaimerText.Parent = ContentContainer
 
 -- ================= TOGGLES & MECHANICS =================
 
--- Fly
-local flySpeed = 50
-local flyBodyVel, flyBodyGyro
 flyBtn.MouseButton1Click:Connect(function()
     flyOn = not flyOn
     flyBtn.Text = "Fly:\n" .. (flyOn and "[On]" or "[Off]")
@@ -394,7 +388,6 @@ flyBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Simple Toggles
 autoHarvestBtn.MouseButton1Click:Connect(function()
     autoHarvestOn = not autoHarvestOn
     autoHarvestBtn.Text = "Auto Harvest:\n" .. (autoHarvestOn and "[On]" or "[Off]")
@@ -415,7 +408,6 @@ autoBuyBtn.MouseButton1Click:Connect(function()
     autoBuyBtn.Text = "Auto Buy:\n" .. (autoBuyOn and "[On]" or "[Off]")
 end)
 
--- Invincible
 invincibleBtn.MouseButton1Click:Connect(function()
     invincibleOn = not invincibleOn
     invincibleBtn.Text = "Invincible:\n" .. (invincibleOn and "[On]" or "[Off]")
@@ -440,7 +432,6 @@ invincibleBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Anti Damage Shield
 antiDamageBtn.MouseButton1Click:Connect(function()
     antiDamageOn = not antiDamageOn
     antiDamageBtn.Text = "Anti Damage:\n" .. (antiDamageOn and "[On]" or "[Off]")
@@ -453,14 +444,13 @@ end)
 
 -- ================= MAIN LOOPS =================
 
--- Frame Loop (Movement & Shield)
+local flySpeed = 50
 RunService.RenderStepped:Connect(function()
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hrp = char.HumanoidRootPart
     local hum = char:FindFirstChildOfClass("Humanoid")
 
-    -- Fly Mechanics
     if flyOn and flyBodyVel and flyBodyGyro and hum then
         local cam = workspace.CurrentCamera
         local moveDir = hum.MoveDirection
@@ -480,7 +470,6 @@ RunService.RenderStepped:Connect(function()
         flyBodyGyro.CFrame = cam.CFrame
     end
 
-    -- Anti Damage Shield Mechanics
     if antiDamageOn then
         if not shieldPart or not shieldPart.Parent then
             shieldPart = Instance.new("Part")
@@ -496,7 +485,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Fast Loop (Proximity Prompts)
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -524,27 +512,31 @@ task.spawn(function()
     end
 end)
 
--- Auto Buy System Loop
+-- ================= REAL AUTO BUY LOOP =================
 task.spawn(function()
     while true do
-        task.wait(0.5) -- Fires every 0.5s to prevent immediate crashing
+        task.wait(0.5) 
         if autoBuyOn and currentInternalType and currentItem then
             pcall(function()
-                local Remote = game:GetService("ReplicatedStorage"):FindFirstChild("RemoteEvents")
-                if Remote and Remote:FindFirstChild("ReplicaSet") then
-                    -- Fires the exact structure you provided
-                    if firesignal then
-                        firesignal(Remote.ReplicaSet.OnClientEvent, table.unpack({
-                            [1] = 1,
-                            [2] = {
-                                [1] = "PurchasedThisRestock",
-                                [2] = currentInternalType,
-                                [3] = currentItem,
-                            },
-                            [3] = 20,
-                        }))
+                
+                -- The REAL method to buy items uses FireServer
+                -- It targets standard shop remotes instead of the fake GUI visual remote.
+                local RS = game:GetService("ReplicatedStorage")
+                local remoteFolder = RS:FindFirstChild("RemoteEvents") or RS:FindFirstChild("Remotes")
+                
+                if remoteFolder then
+                    -- Scans the folder for anything related to Buying or Purchasing
+                    for _, remote in pairs(remoteFolder:GetChildren()) do
+                        if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
+                            local lowerName = remote.Name:lower()
+                            if lowerName:match("buy") or lowerName:match("purchase") or lowerName:match("shop") then
+                                -- Fires the actual request to the server
+                                remote:FireServer(currentInternalType, currentItem, 1)
+                            end
+                        end
                     end
                 end
+                
             end)
         end
     end
