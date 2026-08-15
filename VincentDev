@@ -7,7 +7,7 @@ local LocalPlayer = Players.LocalPlayer
 -- ================= NETWORKING =================
 local Net = (function()
     local ok, m = pcall(function()
-        return require(ReplicatedStorage.SharedModules.Networking)
+        return require(ReplicatedStorage:FindFirstChild("SharedModules") and ReplicatedStorage.SharedModules:FindFirstChild("Networking"))
     end)
     return ok and m or nil
 end)()
@@ -129,7 +129,10 @@ ContentContainer.ZIndex = 2
 ContentContainer.Parent = InnerFrame
 
 -- ================= DRAG FUNCTIONALITY =================
-local dragging, dragInput, dragStart, startPos
+local dragging = false
+local dragInput = nil
+local dragStart = nil
+local startPos = nil
 
 local function updateDrag(input)
     local delta = input.Position - dragStart
@@ -182,7 +185,10 @@ CircleBorder.Thickness = 2
 CircleBorder.Parent = CircleLogo
 
 -- Circle logo drag functionality
-local circleDragging, circleDragInput, circleDragStart, circleStartPos
+local circleDragging = false
+local circleDragInput = nil
+local circleDragStart = nil
+local circleStartPos = nil
 
 local function updateCircleDrag(input)
     local delta = input.Position - circleDragStart
@@ -688,8 +694,15 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     if invincibleOn then
         -- Reapply invisibility on new character
         task.wait(0.1)
-        invincibleBtn.MouseButton1Click:Fire()
-        invincibleBtn.MouseButton1Click:Fire()
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+        end
+        for _, obj in pairs(char:GetDescendants()) do
+            if obj:IsA("BasePart") or obj:IsA("Decal") or obj:IsA("Texture") then
+                obj.Transparency = 1
+            end
+        end
     end
     
     if speedValue ~= 16 then
