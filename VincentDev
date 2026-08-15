@@ -38,6 +38,7 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
+MainFrame.Visible = true
 MainFrame.Parent = ScreenGui
 
 local FrameCorner = Instance.new("UICorner")
@@ -69,7 +70,65 @@ local InnerCorner = Instance.new("UICorner")
 InnerCorner.CornerRadius = UDim.new(0, 14)
 InnerCorner.Parent = InnerFrame
 
--- Drag functionality
+-- Title bar with gradient
+local TitleFrame = Instance.new("Frame")
+TitleFrame.Size = UDim2.new(1, 0, 0, 60)
+TitleFrame.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+TitleFrame.BorderSizePixel = 0
+TitleFrame.ZIndex = 2
+TitleFrame.Parent = InnerFrame
+
+local TitleGradient = Instance.new("UIGradient")
+TitleGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 120, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 200, 255))
+})
+TitleGradient.Parent = TitleFrame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 14)
+TitleCorner.Parent = TitleFrame
+
+local TitleText = Instance.new("TextLabel")
+TitleText.Size = UDim2.new(0.7, 0, 1, 0)
+TitleText.Position = UDim2.new(0.05, 0, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "XDRAGON.HUB"
+TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleText.TextSize = 24
+TitleText.Font = Enum.Font.GothamBold
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.ZIndex = 3
+TitleText.Parent = TitleFrame
+
+-- Minimize to circle button
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+MinimizeBtn.Position = UDim2.new(1, -40, 0.5, -15)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.Text = "—"
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.TextSize = 20
+MinimizeBtn.ZIndex = 3
+MinimizeBtn.Parent = TitleFrame
+
+local MinimizeCorner = Instance.new("UICorner")
+MinimizeCorner.CornerRadius = UDim.new(0, 8)
+MinimizeCorner.Parent = MinimizeBtn
+
+-- Content container
+local ContentContainer = Instance.new("ScrollingFrame")
+ContentContainer.Size = UDim2.new(1, -20, 1, -70)
+ContentContainer.Position = UDim2.new(0, 10, 0, 65)
+ContentContainer.BackgroundTransparency = 1
+ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 700)
+ContentContainer.ScrollBarThickness = 3
+ContentContainer.ScrollBarImageColor3 = Color3.fromRGB(0, 150, 255)
+ContentContainer.ZIndex = 2
+ContentContainer.Parent = InnerFrame
+
+-- ================= DRAG FUNCTIONALITY =================
 local dragging, dragInput, dragStart, startPos
 
 local function updateDrag(input)
@@ -102,101 +161,79 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Title bar with gradient
-local TitleFrame = Instance.new("Frame")
-TitleFrame.Size = UDim2.new(1, 0, 0, 60)
-TitleFrame.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-TitleFrame.BorderSizePixel = 0
-TitleFrame.ZIndex = 2
-TitleFrame.Parent = InnerFrame
+-- ================= CIRCLE LOGO (Minimized State) =================
+local CircleLogo = Instance.new("ImageButton")
+CircleLogo.Name = "CircleLogo"
+CircleLogo.Size = UDim2.new(0, 60, 0, 60)
+CircleLogo.Position = UDim2.new(0.5, -30, 0.5, -30)
+CircleLogo.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+CircleLogo.Image = "rbxassetid://1511976415632031754"
+CircleLogo.Visible = false
+CircleLogo.ZIndex = 5
+CircleLogo.Parent = ScreenGui
 
-local TitleGradient = Instance.new("UIGradient")
-TitleGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 120, 255)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 200, 255))
-})
-TitleGradient.Parent = TitleFrame
+local CircleCorner = Instance.new("UICorner")
+CircleCorner.CornerRadius = UDim.new(1, 0)
+CircleCorner.Parent = CircleLogo
 
-local TitleCorner = Instance.new("UICorner")
-TitleCorner.CornerRadius = UDim.new(0, 14)
-TitleCorner.Parent = TitleFrame
+local CircleBorder = Instance.new("UIStroke")
+CircleBorder.Color = Color3.fromRGB(0, 200, 255)
+CircleBorder.Thickness = 2
+CircleBorder.Parent = CircleLogo
 
-local LogoButton = Instance.new("ImageButton")
-LogoButton.Size = UDim2.new(0, 40, 0, 40)
-LogoButton.Position = UDim2.new(0.03, 0, 0.5, -20)
-LogoButton.BackgroundTransparency = 1
-LogoButton.Image = "rbxassetid://1511976415632031754"
-LogoButton.ZIndex = 3
-LogoButton.Parent = TitleFrame
+-- Circle logo drag functionality
+local circleDragging, circleDragInput, circleDragStart, circleStartPos
 
-local TitleText = Instance.new("TextLabel")
-TitleText.Size = UDim2.new(0.6, 0, 1, 0)
-TitleText.Position = UDim2.new(0.15, 0, 0, 0)
-TitleText.BackgroundTransparency = 1
-TitleText.Text = "XDRAGON.HUB"
-TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleText.TextSize = 24
-TitleText.Font = Enum.Font.GothamBold
-TitleText.TextXAlignment = Enum.TextXAlignment.Left
-TitleText.ZIndex = 3
-TitleText.Parent = TitleFrame
+local function updateCircleDrag(input)
+    local delta = input.Position - circleDragStart
+    CircleLogo.Position = UDim2.new(circleStartPos.X.Scale, circleStartPos.X.Offset + delta.X, circleStartPos.Y.Scale, circleStartPos.Y.Offset + delta.Y)
+end
 
--- Minimize button
-local MinimizeBtn = Instance.new("TextButton")
-MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
-MinimizeBtn.Position = UDim2.new(1, -40, 0.5, -15)
-MinimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
-MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-MinimizeBtn.Text = "—"
-MinimizeBtn.Font = Enum.Font.GothamBold
-MinimizeBtn.TextSize = 20
-MinimizeBtn.ZIndex = 3
-MinimizeBtn.Parent = TitleFrame
+CircleLogo.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        circleDragging = true
+        circleDragStart = input.Position
+        circleStartPos = CircleLogo.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                circleDragging = false
+            end
+        end)
+    end
+end)
 
-local MinimizeCorner = Instance.new("UICorner")
-MinimizeCorner.CornerRadius = UDim.new(0, 8)
-MinimizeCorner.Parent = MinimizeBtn
+CircleLogo.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        circleDragInput = input
+    end
+end)
 
--- Content container
-local ContentContainer = Instance.new("ScrollingFrame")
-ContentContainer.Size = UDim2.new(1, -20, 1, -70)
-ContentContainer.Position = UDim2.new(0, 10, 0, 65)
-ContentContainer.BackgroundTransparency = 1
-ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 700)
-ContentContainer.ScrollBarThickness = 3
-ContentContainer.ScrollBarImageColor3 = Color3.fromRGB(0, 150, 255)
-ContentContainer.ZIndex = 2
-ContentContainer.Parent = InnerFrame
+UserInputService.InputChanged:Connect(function(input)
+    if input == circleDragInput and circleDragging then
+        updateCircleDrag(input)
+    end
+end)
 
 -- ================= MINIMIZE LOGIC =================
 local isMinimized = false
 local originalSize = MainFrame.Size
-local originalTitleSize = TitleFrame.Size
 
 local function toggleMinimize()
     isMinimized = not isMinimized
     if isMinimized then
-        MainFrame.Size = UDim2.new(0, 50, 0, 50)
-        TitleFrame.Size = UDim2.new(1, 0, 1, 0)
-        TitleCorner.CornerRadius = UDim.new(1, 0)
-        FrameCorner.CornerRadius = UDim.new(1, 0)
-        TitleText.Visible = false
-        ContentContainer.Visible = false
-        LogoButton.Position = UDim2.new(0.5, -20, 0.5, -20)
-        MinimizeBtn.Visible = false
+        MainFrame.Visible = false
+        CircleLogo.Visible = true
     else
-        MainFrame.Size = originalSize
-        TitleFrame.Size = originalTitleSize
-        TitleCorner.CornerRadius = UDim.new(0, 14)
-        FrameCorner.CornerRadius = UDim.new(0, 16)
-        TitleText.Visible = true
-        ContentContainer.Visible = true
-        LogoButton.Position = UDim2.new(0.03, 0, 0.5, -20)
-        MinimizeBtn.Visible = true
+        MainFrame.Visible = true
+        CircleLogo.Visible = false
     end
 end
 MinimizeBtn.MouseButton1Click:Connect(toggleMinimize)
-LogoButton.MouseButton1Click:Connect(toggleMinimize)
+CircleLogo.MouseButton1Click:Connect(function()
+    if not circleDragging then
+        toggleMinimize()
+    end
+end)
 
 -- ================= DATA & VARIABLES =================
 local flyOn, autoHarvestOn, antiDamageOn, invincibleOn, autoClaimGoldSeedOn, autoStealOn, autoBuyOn = false, false, false, false, false, false, false
@@ -321,7 +358,7 @@ SpeedSlider.FocusLost:Connect(function(enterPressed)
 end)
 
 local autoBuyBtn = createButton("Auto Buy:\n[Off]", UDim2.new(0, 0, 0, 370), UDim2.new(1, 0, 0, 50))
-local setupAutoBuyBtn = createButton("⚙️ Setup Auto Buy Items", UDim2.new(0, 0, 0, 430), UDim2.new(1, 0, 0, 50))
+local setupAutoBuyBtn = createButton("Setup Auto Buy Items", UDim2.new(0, 0, 0, 430), UDim2.new(1, 0, 0, 50))
 
 -- ================= MULTI-SELECT POPUP SYSTEM =================
 local PopupFrame = Instance.new("Frame")
@@ -434,7 +471,7 @@ openItemMenu = function(catName)
     backBtn.Size = UDim2.new(1, 0, 0, 35)
     backBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 0)
     backBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    backBtn.Text = "⬅️ Back to Categories"
+    backBtn.Text = "Back to Categories"
     backBtn.Font = Enum.Font.GothamBold
     backBtn.TextSize = 16
     backBtn.ZIndex = 11
