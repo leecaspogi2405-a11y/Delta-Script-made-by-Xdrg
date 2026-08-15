@@ -29,21 +29,47 @@ if not success then
     ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
 
+-- Modern Delta-style UI
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 360, 0, 520)
-MainFrame.Position = UDim2.new(0.5, -180, 0.35, -240)
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+MainFrame.Size = UDim2.new(0, 400, 0, 580)
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -290)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 
 local FrameCorner = Instance.new("UICorner")
-FrameCorner.CornerRadius = UDim.new(0, 12)
+FrameCorner.CornerRadius = UDim.new(0, 16)
 FrameCorner.Parent = MainFrame
 
--- Custom Mobile-Friendly Drag
+-- Gradient border effect
+local BorderFrame = Instance.new("Frame")
+BorderFrame.Size = UDim2.new(1, 4, 1, 4)
+BorderFrame.Position = UDim2.new(0, -2, 0, -2)
+BorderFrame.BackgroundColor3 = Color3.fromRGB(0, 200, 255)
+BorderFrame.BorderSizePixel = 0
+BorderFrame.ZIndex = 0
+BorderFrame.Parent = MainFrame
+
+local BorderCorner = Instance.new("UICorner")
+BorderCorner.CornerRadius = UDim.new(0, 16)
+BorderCorner.Parent = BorderFrame
+
+local InnerFrame = Instance.new("Frame")
+InnerFrame.Size = UDim2.new(1, -4, 1, -4)
+InnerFrame.Position = UDim2.new(0, 2, 0, 2)
+InnerFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+InnerFrame.BorderSizePixel = 0
+InnerFrame.ZIndex = 1
+InnerFrame.Parent = MainFrame
+
+local InnerCorner = Instance.new("UICorner")
+InnerCorner.CornerRadius = UDim.new(0, 14)
+InnerCorner.Parent = InnerFrame
+
+-- Drag functionality
 local dragging, dragInput, dragStart, startPos
 
 local function updateDrag(input)
@@ -76,54 +102,73 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
-local BackgroundImage = Instance.new("ImageLabel")
-BackgroundImage.Size = UDim2.new(1, 0, 1, 0)
-BackgroundImage.BackgroundTransparency = 1
-BackgroundImage.Image = "rbxassetid://1536409700667629670"
-BackgroundImage.ZIndex = 0
-BackgroundImage.Parent = MainFrame
-
+-- Title bar with gradient
 local TitleFrame = Instance.new("Frame")
-TitleFrame.Size = UDim2.new(1, 0, 0, 50)
-TitleFrame.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+TitleFrame.Size = UDim2.new(1, 0, 0, 60)
+TitleFrame.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
 TitleFrame.BorderSizePixel = 0
 TitleFrame.ZIndex = 2
-TitleFrame.Parent = MainFrame
+TitleFrame.Parent = InnerFrame
+
+local TitleGradient = Instance.new("UIGradient")
+TitleGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 120, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 200, 255))
+})
+TitleGradient.Parent = TitleFrame
 
 local TitleCorner = Instance.new("UICorner")
-TitleCorner.CornerRadius = UDim.new(0, 12)
+TitleCorner.CornerRadius = UDim.new(0, 14)
 TitleCorner.Parent = TitleFrame
 
 local LogoButton = Instance.new("ImageButton")
-LogoButton.Size = UDim2.new(0, 38, 0, 38)
-LogoButton.Position = UDim2.new(0.04, 0, 0.5, -19)
+LogoButton.Size = UDim2.new(0, 40, 0, 40)
+LogoButton.Position = UDim2.new(0.03, 0, 0.5, -20)
 LogoButton.BackgroundTransparency = 1
 LogoButton.Image = "rbxassetid://1511976415632031754"
-LogoButton.ZIndex = 4
+LogoButton.ZIndex = 3
 LogoButton.Parent = TitleFrame
 
 local TitleText = Instance.new("TextLabel")
-TitleText.Size = UDim2.new(0.7, 0, 1, 0)
-TitleText.Position = UDim2.new(0.18, 0, 0, 0)
+TitleText.Size = UDim2.new(0.6, 0, 1, 0)
+TitleText.Position = UDim2.new(0.15, 0, 0, 0)
 TitleText.BackgroundTransparency = 1
 TitleText.Text = "XDRAGON.HUB"
 TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleText.TextSize = 22
-TitleText.Font = Enum.Font.SourceSansBold
+TitleText.TextSize = 24
+TitleText.Font = Enum.Font.GothamBold
 TitleText.TextXAlignment = Enum.TextXAlignment.Left
 TitleText.ZIndex = 3
 TitleText.Parent = TitleFrame
 
-local ContentContainer = Instance.new("ScrollingFrame")
-ContentContainer.Size = UDim2.new(1, -20, 1, -60)
-ContentContainer.Position = UDim2.new(0, 10, 0, 55)
-ContentContainer.BackgroundTransparency = 1
-ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 600)
-ContentContainer.ScrollBarThickness = 4
-ContentContainer.ZIndex = 2
-ContentContainer.Parent = MainFrame
+-- Minimize button
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+MinimizeBtn.Position = UDim2.new(1, -40, 0.5, -15)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.Text = "—"
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.TextSize = 20
+MinimizeBtn.ZIndex = 3
+MinimizeBtn.Parent = TitleFrame
 
--- ================= MINIMIZE TO CIRCLE LOGIC =================
+local MinimizeCorner = Instance.new("UICorner")
+MinimizeCorner.CornerRadius = UDim.new(0, 8)
+MinimizeCorner.Parent = MinimizeBtn
+
+-- Content container
+local ContentContainer = Instance.new("ScrollingFrame")
+ContentContainer.Size = UDim2.new(1, -20, 1, -70)
+ContentContainer.Position = UDim2.new(0, 10, 0, 65)
+ContentContainer.BackgroundTransparency = 1
+ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 700)
+ContentContainer.ScrollBarThickness = 3
+ContentContainer.ScrollBarImageColor3 = Color3.fromRGB(0, 150, 255)
+ContentContainer.ZIndex = 2
+ContentContainer.Parent = InnerFrame
+
+-- ================= MINIMIZE LOGIC =================
 local isMinimized = false
 local originalSize = MainFrame.Size
 local originalTitleSize = TitleFrame.Size
@@ -137,25 +182,28 @@ local function toggleMinimize()
         FrameCorner.CornerRadius = UDim.new(1, 0)
         TitleText.Visible = false
         ContentContainer.Visible = false
-        BackgroundImage.Visible = false
-        LogoButton.Position = UDim2.new(0.5, -19, 0.5, -19)
+        LogoButton.Position = UDim2.new(0.5, -20, 0.5, -20)
+        MinimizeBtn.Visible = false
     else
         MainFrame.Size = originalSize
         TitleFrame.Size = originalTitleSize
-        TitleCorner.CornerRadius = UDim.new(0, 12)
-        FrameCorner.CornerRadius = UDim.new(0, 12)
+        TitleCorner.CornerRadius = UDim.new(0, 14)
+        FrameCorner.CornerRadius = UDim.new(0, 16)
         TitleText.Visible = true
         ContentContainer.Visible = true
-        BackgroundImage.Visible = true
-        LogoButton.Position = UDim2.new(0.04, 0, 0.5, -19)
+        LogoButton.Position = UDim2.new(0.03, 0, 0.5, -20)
+        MinimizeBtn.Visible = true
     end
 end
+MinimizeBtn.MouseButton1Click:Connect(toggleMinimize)
 LogoButton.MouseButton1Click:Connect(toggleMinimize)
 
 -- ================= DATA & VARIABLES =================
 local flyOn, autoHarvestOn, antiDamageOn, invincibleOn, autoClaimGoldSeedOn, autoStealOn, autoBuyOn = false, false, false, false, false, false, false
 local shieldPart, originalTransparencies = nil, {}
 local flyBodyVel, flyBodyGyro = nil, nil
+local flySpeed = 50
+local speedValue = 16
 
 local ShopData = {
     ["Garden Valley Seeds"] = { Type = "Seeds", Items = {"Carrot", "Strawberry", "Blueberry", "Tulip", "Tomato", "Apple", "Bamboo", "Corn", "Cactus", "Pineapple", "Mushroom", "Green Bean", "Banana Grape", "Coconut", "Mango", "Dragon Fruit", "Acorn", "Cherry", "Sunflower", "Fire Fern", "Venus Flytrap", "Pomegranate", "Poison Apple", "Venom Spitter", "Briar Rose", "Moon Bloom", "Sun Bloom", "Hypno Bloom", "Dragon's Breath", "Star Fruit"} },
@@ -187,90 +235,150 @@ local function updateActiveBuyList()
 end
 
 -- ================= UI BUTTON BUILDER =================
-local function createCyanButton(text, pos, size)
+local function createButton(text, pos, size, color)
     local btn = Instance.new("TextButton")
     btn.Size = size or UDim2.new(0.48, 0, 0, 90)
     btn.Position = pos
-    btn.BackgroundColor3 = Color3.fromRGB(0, 220, 220)
+    btn.BackgroundColor3 = color or Color3.fromRGB(0, 180, 255)
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Text = text
-    btn.Font = Enum.Font.SourceSansSemibold
-    btn.TextSize = 20
+    btn.Font = Enum.Font.GothamSemibold
+    btn.TextSize = 18
     btn.ZIndex = 2
     btn.Parent = ContentContainer
+    
     local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 8)
+    btnCorner.CornerRadius = UDim.new(0, 10)
     btnCorner.Parent = btn
+    
+    local btnGradient = Instance.new("UIGradient")
+    btnGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, btn.BackgroundColor3),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 120, 200))
+    })
+    btnGradient.Parent = btn
+    
     return btn
 end
 
-local flyBtn = createCyanButton("Fly:\n[Off]", UDim2.new(0, 0, 0, 0))
-local invincibleBtn = createCyanButton("Invincible:\n[Off]", UDim2.new(0.52, 0, 0, 0))
-local autoHarvestBtn = createCyanButton("Auto Harvest:\n[Off]", UDim2.new(0, 0, 0, 100))
-local autoClaimGoldSeedBtn = createCyanButton("Auto Claim\nGold Seed:\n[Off]", UDim2.new(0.52, 0, 0, 100))
-local antiDamageBtn = createCyanButton("Anti Damage:\n[Off]", UDim2.new(0, 0, 0, 200))
-local autoStealBtn = createCyanButton("Auto Steal:\n[Off]", UDim2.new(0.52, 0, 0, 200))
+local flyBtn = createButton("Fly:\n[Off]", UDim2.new(0, 0, 0, 0))
+local invincibleBtn = createButton("Invisible:\n[Off]", UDim2.new(0.52, 0, 0, 0))
+local autoHarvestBtn = createButton("Auto Harvest:\n[Off]", UDim2.new(0, 0, 0, 100))
+local autoClaimGoldSeedBtn = createButton("Auto Claim\nGold Seed:\n[Off]", UDim2.new(0.52, 0, 0, 100))
+local antiDamageBtn = createButton("Anti Damage:\n[Off]", UDim2.new(0, 0, 0, 200))
+local autoStealBtn = createButton("Auto Steal:\n[Off]", UDim2.new(0.52, 0, 0, 200))
 
-local autoBuyBtn = createCyanButton("Auto Buy:\n[Off]", UDim2.new(0, 0, 0, 300), UDim2.new(1, 0, 0, 50))
-local setupAutoBuyBtn = createCyanButton("⚙️ Setup Auto Buy Items", UDim2.new(0, 0, 0, 360), UDim2.new(1, 0, 0, 50))
-setupAutoBuyBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
+-- Speed control
+local SpeedFrame = Instance.new("Frame")
+SpeedFrame.Size = UDim2.new(1, 0, 0, 60)
+SpeedFrame.Position = UDim2.new(0, 0, 0, 300)
+SpeedFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+SpeedFrame.ZIndex = 2
+SpeedFrame.Parent = ContentContainer
 
-local DisclaimerText = Instance.new("TextLabel")
-DisclaimerText.Size = UDim2.new(1, 0, 0, 120)
-DisclaimerText.Position = UDim2.new(0, 0, 0, 430)
-DisclaimerText.BackgroundTransparency = 1
-DisclaimerText.Text = "DISCLAIMER: This Script Made By Dev Xdragon. For Better Performance Download Xdragon.Hub v3.\n\nCredit: Dev Xdragon, Vincent Magtolis, Summere Castrence, Charles Mendoza\n\nThank you for using Xdragon.Hub v3!"
-DisclaimerText.TextColor3 = Color3.fromRGB(200, 200, 200)
-DisclaimerText.TextSize = 13
-DisclaimerText.Font = Enum.Font.SourceSansBold
-DisclaimerText.TextWrapped = true
-DisclaimerText.TextYAlignment = Enum.TextYAlignment.Top
-DisclaimerText.ZIndex = 2
-DisclaimerText.Parent = ContentContainer
+local SpeedCorner = Instance.new("UICorner")
+SpeedCorner.CornerRadius = UDim.new(0, 10)
+SpeedCorner.Parent = SpeedFrame
+
+local SpeedLabel = Instance.new("TextLabel")
+SpeedLabel.Size = UDim2.new(1, 0, 0, 20)
+SpeedLabel.Position = UDim2.new(0, 0, 0, 5)
+SpeedLabel.BackgroundTransparency = 1
+SpeedLabel.Text = "Speed: 16"
+SpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedLabel.Font = Enum.Font.GothamSemibold
+SpeedLabel.TextSize = 16
+SpeedLabel.ZIndex = 3
+SpeedLabel.Parent = SpeedFrame
+
+local SpeedSlider = Instance.new("TextBox")
+SpeedSlider.Size = UDim2.new(0.8, 0, 0, 25)
+SpeedSlider.Position = UDim2.new(0.1, 0, 0, 30)
+SpeedSlider.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+SpeedSlider.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpeedSlider.Text = "16"
+SpeedSlider.Font = Enum.Font.Gotham
+SpeedSlider.TextSize = 14
+SpeedSlider.ZIndex = 3
+SpeedSlider.Parent = SpeedFrame
+
+local SpeedCorner2 = Instance.new("UICorner")
+SpeedCorner2.CornerRadius = UDim.new(0, 5)
+SpeedCorner2.Parent = SpeedSlider
+
+SpeedSlider.FocusLost:Connect(function(enterPressed)
+    local newSpeed = tonumber(SpeedSlider.Text)
+    if newSpeed and newSpeed >= 16 and newSpeed <= 1000000000 then
+        speedValue = newSpeed
+        SpeedLabel.Text = "Speed: " .. tostring(newSpeed)
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChildOfClass("Humanoid") then
+            char:FindFirstChildOfClass("Humanoid").WalkSpeed = newSpeed
+        end
+    else
+        SpeedSlider.Text = tostring(speedValue)
+    end
+end)
+
+local autoBuyBtn = createButton("Auto Buy:\n[Off]", UDim2.new(0, 0, 0, 370), UDim2.new(1, 0, 0, 50))
+local setupAutoBuyBtn = createButton("⚙️ Setup Auto Buy Items", UDim2.new(0, 0, 0, 430), UDim2.new(1, 0, 0, 50))
 
 -- ================= MULTI-SELECT POPUP SYSTEM =================
 local PopupFrame = Instance.new("Frame")
-PopupFrame.Size = UDim2.new(0, 320, 0, 420)
-PopupFrame.Position = UDim2.new(0.5, -160, 0.5, -210)
-PopupFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+PopupFrame.Size = UDim2.new(0, 340, 0, 450)
+PopupFrame.Position = UDim2.new(0.5, -170, 0.5, -225)
+PopupFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 PopupFrame.Visible = false
 PopupFrame.ZIndex = 10
 PopupFrame.Parent = ScreenGui
 
 local PopupCorner = Instance.new("UICorner")
-PopupCorner.CornerRadius = UDim.new(0, 12)
+PopupCorner.CornerRadius = UDim.new(0, 14)
 PopupCorner.Parent = PopupFrame
+
+local PopupBorder = Instance.new("Frame")
+PopupBorder.Size = UDim2.new(1, 2, 1, 2)
+PopupBorder.Position = UDim2.new(0, -1, 0, -1)
+PopupBorder.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
+PopupBorder.BorderSizePixel = 0
+PopupBorder.ZIndex = 9
+PopupBorder.Parent = PopupFrame
+
+local PopupBorderCorner = Instance.new("UICorner")
+PopupBorderCorner.CornerRadius = UDim.new(0, 14)
+PopupBorderCorner.Parent = PopupBorder
 
 local PopupTitle = Instance.new("TextLabel")
 PopupTitle.Size = UDim2.new(1, 0, 0, 40)
 PopupTitle.BackgroundTransparency = 1
 PopupTitle.Text = "Select Category"
-PopupTitle.TextColor3 = Color3.fromRGB(0, 220, 220)
+PopupTitle.TextColor3 = Color3.fromRGB(0, 180, 255)
 PopupTitle.TextSize = 20
-PopupTitle.Font = Enum.Font.SourceSansBold
+PopupTitle.Font = Enum.Font.GothamBold
 PopupTitle.ZIndex = 11
 PopupTitle.Parent = PopupFrame
 
 local ClosePopupBtn = Instance.new("TextButton")
 ClosePopupBtn.Size = UDim2.new(0, 30, 0, 30)
 ClosePopupBtn.Position = UDim2.new(1, -35, 0, 5)
-ClosePopupBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+ClosePopupBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
 ClosePopupBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 ClosePopupBtn.Text = "X"
-ClosePopupBtn.Font = Enum.Font.SourceSansBold
+ClosePopupBtn.Font = Enum.Font.GothamBold
 ClosePopupBtn.TextSize = 18
 ClosePopupBtn.ZIndex = 11
 ClosePopupBtn.Parent = PopupFrame
 
 local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0, 6)
+CloseCorner.CornerRadius = UDim.new(0, 8)
 CloseCorner.Parent = ClosePopupBtn
 
 local PopupScroll = Instance.new("ScrollingFrame")
 PopupScroll.Size = UDim2.new(1, -20, 1, -50)
 PopupScroll.Position = UDim2.new(0, 10, 0, 40)
 PopupScroll.BackgroundTransparency = 1
-PopupScroll.ScrollBarThickness = 4
+PopupScroll.ScrollBarThickness = 3
+PopupScroll.ScrollBarImageColor3 = Color3.fromRGB(0, 180, 255)
 PopupScroll.ZIndex = 11
 PopupScroll.Parent = PopupFrame
 
@@ -295,15 +403,15 @@ openCategoryMenu = function()
     for _, catName in ipairs(CategoryNames) do
         local btn = Instance.new("TextButton")
         btn.Size = UDim2.new(1, 0, 0, 35)
-        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+        btn.BackgroundColor3 = Color3.fromRGB(45, 45, 50)
         btn.TextColor3 = Color3.fromRGB(255, 255, 255)
         btn.Text = catName
-        btn.Font = Enum.Font.SourceSansSemibold
+        btn.Font = Enum.Font.GothamSemibold
         btn.TextSize = 16
         btn.ZIndex = 11
         btn.Parent = PopupScroll
         local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 6)
+        corner.CornerRadius = UDim.new(0, 8)
         corner.Parent = btn
         btn.MouseButton1Click:Connect(function()
             openItemMenu(catName)
@@ -327,12 +435,12 @@ openItemMenu = function(catName)
     backBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 0)
     backBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     backBtn.Text = "⬅️ Back to Categories"
-    backBtn.Font = Enum.Font.SourceSansBold
+    backBtn.Font = Enum.Font.GothamBold
     backBtn.TextSize = 16
     backBtn.ZIndex = 11
     backBtn.Parent = PopupScroll
     local backCorner = Instance.new("UICorner")
-    backCorner.CornerRadius = UDim.new(0, 6)
+    backCorner.CornerRadius = UDim.new(0, 8)
     backCorner.Parent = backBtn
     backBtn.MouseButton1Click:Connect(function()
         openCategoryMenu()
@@ -344,7 +452,7 @@ openItemMenu = function(catName)
         btn.Size = UDim2.new(1, 0, 0, 35)
         btn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
         btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btn.Font = Enum.Font.SourceSansSemibold
+        btn.Font = Enum.Font.GothamSemibold
         btn.TextSize = 16
         btn.TextXAlignment = Enum.TextXAlignment.Left
         btn.ZIndex = 11
@@ -355,20 +463,20 @@ openItemMenu = function(catName)
         padding.Parent = btn
 
         local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 6)
+        corner.CornerRadius = UDim.new(0, 8)
         corner.Parent = btn
 
         local isSelected = SelectedItems[catName][itemName] or false
         btn.Text = (isSelected and "✅ " or "⬜ ") .. itemName
         if isSelected then
-            btn.BackgroundColor3 = Color3.fromRGB(0, 150, 150)
+            btn.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
         end
 
         btn.MouseButton1Click:Connect(function()
             SelectedItems[catName][itemName] = not SelectedItems[catName][itemName]
             local newState = SelectedItems[catName][itemName]
             btn.Text = (newState and "✅ " or "⬜ ") .. itemName
-            btn.BackgroundColor3 = newState and Color3.fromRGB(0, 150, 150) or Color3.fromRGB(40, 40, 45)
+            btn.BackgroundColor3 = newState and Color3.fromRGB(0, 150, 200) or Color3.fromRGB(40, 40, 45)
             updateActiveBuyList()
         end)
         contentHeight = contentHeight + 40
@@ -426,39 +534,94 @@ autoBuyBtn.MouseButton1Click:Connect(function()
     autoBuyBtn.Text = "Auto Buy:\n" .. (autoBuyOn and "[On]" or "[Off]")
 end)
 
+-- Fixed invisibility (true invisibility)
 invincibleBtn.MouseButton1Click:Connect(function()
     invincibleOn = not invincibleOn
-    invincibleBtn.Text = "Invincible:\n" .. (invincibleOn and "[On]" or "[Off]")
+    invincibleBtn.Text = "Invisible:\n" .. (invincibleOn and "[On]" or "[Off]")
     local char = LocalPlayer.Character
     if not char then return end
+    
     if invincibleOn then
+        -- Store original properties
         originalTransparencies = {}
         for _, obj in pairs(char:GetDescendants()) do
-            if obj:IsA("BasePart") or obj:IsA("Decal") then
+            if obj:IsA("BasePart") then
                 originalTransparencies[obj] = obj.Transparency
                 obj.Transparency = 1
+            elseif obj:IsA("Decal") or obj:IsA("Texture") then
+                originalTransparencies[obj] = obj.Transparency
+                obj.Transparency = 1
+            elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
+                originalTransparencies[obj] = obj.Enabled
+                obj.Enabled = false
             end
+        end
+        
+        -- Also hide accessories
+        for _, accessory in pairs(char:GetChildren()) do
+            if accessory:IsA("Accessory") then
+                local handle = accessory:FindFirstChild("Handle")
+                if handle then
+                    originalTransparencies[handle] = handle.Transparency
+                    handle.Transparency = 1
+                end
+            end
+        end
+        
+        -- Set humanoid to invisible
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
         end
     else
-        for obj, trans in pairs(originalTransparencies) do
+        -- Restore original properties
+        for obj, value in pairs(originalTransparencies) do
             if obj and obj.Parent then
-                obj.Transparency = trans
+                if obj:IsA("BasePart") or obj:IsA("Decal") or obj:IsA("Texture") then
+                    obj.Transparency = value
+                elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
+                    obj.Enabled = value
+                end
             end
         end
+        
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.Viewer
+        end
+        
+        originalTransparencies = {}
     end
 end)
 
+-- Improved anti-damage with forcefield
 antiDamageBtn.MouseButton1Click:Connect(function()
     antiDamageOn = not antiDamageOn
     antiDamageBtn.Text = "Anti Damage:\n" .. (antiDamageOn and "[On]" or "[Off]")
-    if not antiDamageOn and shieldPart then
-        shieldPart:Destroy()
-        shieldPart = nil
+    
+    local char = LocalPlayer.Character
+    if not char then return end
+    
+    if antiDamageOn then
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            -- Create forcefield
+            local forcefield = Instance.new("ForceField")
+            forcefield.Visible = false
+            forcefield.Parent = char
+            
+            -- Store reference
+            shieldPart = forcefield
+        end
+    else
+        if shieldPart then
+            shieldPart:Destroy()
+            shieldPart = nil
+        end
     end
 end)
 
 -- ================= MAIN LOOPS =================
-local flySpeed = 50
 RunService.RenderStepped:Connect(function()
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
@@ -469,28 +632,35 @@ RunService.RenderStepped:Connect(function()
         local cam = workspace.CurrentCamera
         local moveDir = hum.MoveDirection
         if moveDir.Magnitude > 0 then
-            local flatLook = Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z).Unit
-            local flatRight = Vector3.new(cam.CFrame.RightVector.X, 0, cam.CFrame.RightVector.Z).Unit
-            local flightVector = (cam.CFrame.LookVector * moveDir:Dot(flatLook)) + (cam.CFrame.RightVector * moveDir:Dot(flatRight))
+            local flightVector = (cam.CFrame.LookVector * moveDir.Z) + (cam.CFrame.RightVector * moveDir.X)
             flyBodyVel.Velocity = flightVector * flySpeed
         else
             flyBodyVel.Velocity = Vector3.zero
         end
         flyBodyGyro.CFrame = cam.CFrame
     end
+    
+    -- Update walk speed
+    if hum and hum.WalkSpeed ~= speedValue then
+        hum.WalkSpeed = speedValue
+    end
+end)
 
-    if antiDamageOn then
-        if not shieldPart or not shieldPart.Parent then
-            shieldPart = Instance.new("Part")
-            shieldPart.Name = "AntiDamagePart"
-            shieldPart.Shape = Enum.PartType.Cylinder
-            shieldPart.Size = Vector3.new(12, 10, 10)
-            shieldPart.Transparency = 1
-            shieldPart.CanCollide = true
-            shieldPart.Anchored = true
-            shieldPart.Parent = workspace
+-- Character added handler for invisibility and speed
+LocalPlayer.CharacterAdded:Connect(function(char)
+    if invincibleOn then
+        -- Reapply invisibility on new character
+        task.wait(0.1)
+        invincibleBtn.MouseButton1Click:Fire()
+        invincibleBtn.MouseButton1Click:Fire()
+    end
+    
+    if speedValue ~= 16 then
+        task.wait(0.5)
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = speedValue
         end
-        shieldPart.CFrame = hrp.CFrame * CFrame.Angles(0, 0, math.rad(90))
     end
 end)
 
@@ -518,7 +688,7 @@ task.spawn(function()
     end
 end)
 
--- ================= AUTO BUY (FIXED - uses proper Net remotes) =================
+-- ================= AUTO BUY =================
 task.spawn(function()
     while true do
         task.wait(0.3)
