@@ -5,21 +5,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 
--- ================= NETWORKING & FALLBACK =================
-local Net = (function()
-    local ok, m = pcall(function()
-        return require(ReplicatedStorage:FindFirstChild("SharedModules") and ReplicatedStorage.SharedModules:FindFirstChild("Networking"))
-    end)
-    return ok and m or nil
-end)()
+local Packet = ReplicatedStorage:WaitForChild("SharedModules", math.huge):WaitForChild("Packet", math.huge):WaitForChild("RemoteEvent", math.huge)
 
-local function findRemote(name)
-    for _, v in pairs(ReplicatedStorage:GetDescendants()) do
-        if v:IsA("RemoteEvent") and v.Name == name then return v end
-    end
-end
-
--- ================= RAYFIELD GEN 2 INSPIRED UI =================
 local guiParent = gethui and gethui() or game:GetService("CoreGui")
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "XDragonHub_Rayfield"
@@ -45,6 +32,7 @@ main.BackgroundColor3 = C.bg
 main.BorderSizePixel = 0
 main.ClipsDescendants = true
 main.Active = true
+main.Visible = true
 main.Parent = screenGui
 
 Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
@@ -63,8 +51,40 @@ shadow.ScaleType = Enum.ScaleType.Slice
 shadow.SliceCenter = Rect.new(23, 23, 277, 277)
 shadow.ZIndex = -1
 
+local topbar = Instance.new("Frame", main)
+topbar.Size = UDim2.new(1, 0, 0, 30)
+topbar.BackgroundColor3 = C.sidebar
+topbar.BorderSizePixel = 0
+Instance.new("UICorner", topbar).CornerRadius = UDim.new(0, 10)
+local topFix = Instance.new("Frame", topbar)
+topFix.Size = UDim2.new(1, 0, 0, 10)
+topFix.Position = UDim2.new(0, 0, 1, -10)
+topFix.BackgroundColor3 = C.sidebar
+topFix.BorderSizePixel = 0
+
+local topTitle = Instance.new("TextLabel", topbar)
+topTitle.Size = UDim2.new(1, -80, 1, 0)
+topTitle.Position = UDim2.new(0, 15, 0, 0)
+topTitle.BackgroundTransparency = 1
+topTitle.Text = "XDRAGON HUB"
+topTitle.TextColor3 = C.text
+topTitle.TextSize = 13
+topTitle.Font = Enum.Font.GothamBold
+topTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+local minBtn = Instance.new("TextButton", topbar)
+minBtn.Size = UDim2.new(0, 24, 0, 24)
+minBtn.Position = UDim2.new(1, -35, 0, 3)
+minBtn.BackgroundColor3 = C.element
+minBtn.Text = "-"
+minBtn.TextColor3 = C.text
+minBtn.Font = Enum.Font.GothamBold
+minBtn.TextSize = 16
+Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 6)
+
 local sidebar = Instance.new("Frame", main)
-sidebar.Size = UDim2.new(0, 140, 1, 0)
+sidebar.Size = UDim2.new(0, 140, 1, -30)
+sidebar.Position = UDim2.new(0, 0, 0, 30)
 sidebar.BackgroundColor3 = C.sidebar
 sidebar.BorderSizePixel = 0
 Instance.new("UICorner", sidebar).CornerRadius = UDim.new(0, 10)
@@ -73,34 +93,22 @@ sFix.Size = UDim2.new(0, 10, 1, 0)
 sFix.Position = UDim2.new(1, -10, 0, 0)
 sFix.BackgroundColor3 = C.sidebar
 sFix.BorderSizePixel = 0
-
-local title = Instance.new("TextLabel", sidebar)
-title.Size = UDim2.new(1, 0, 0, 50)
-title.BackgroundTransparency = 1
-title.Text = "XDRAGON"
-title.TextColor3 = C.text
-title.TextSize = 20
-title.Font = Enum.Font.GothamBold
-
-local subtitle = Instance.new("TextLabel", sidebar)
-subtitle.Size = UDim2.new(1, 0, 0, 20)
-subtitle.Position = UDim2.new(0, 0, 0, 30)
-subtitle.BackgroundTransparency = 1
-subtitle.Text = "HUB"
-subtitle.TextColor3 = C.accent
-subtitle.TextSize = 14
-subtitle.Font = Enum.Font.GothamBold
+local sFix2 = Instance.new("Frame", sidebar)
+sFix2.Size = UDim2.new(1, 0, 0, 10)
+sFix2.Position = UDim2.new(0, 0, 0, 0)
+sFix2.BackgroundColor3 = C.sidebar
+sFix2.BorderSizePixel = 0
 
 local tabsFrame = Instance.new("Frame", sidebar)
-tabsFrame.Size = UDim2.new(1, -20, 1, -90)
-tabsFrame.Position = UDim2.new(0, 10, 0, 70)
+tabsFrame.Size = UDim2.new(1, -20, 1, -20)
+tabsFrame.Position = UDim2.new(0, 10, 0, 10)
 tabsFrame.BackgroundTransparency = 1
 local tabsLayout = Instance.new("UIListLayout", tabsFrame)
 tabsLayout.Padding = UDim.new(0, 6)
 
 local content = Instance.new("Frame", main)
-content.Size = UDim2.new(1, -160, 1, -20)
-content.Position = UDim2.new(0, 150, 0, 10)
+content.Size = UDim2.new(1, -160, 1, -50)
+content.Position = UDim2.new(0, 150, 0, 40)
 content.BackgroundTransparency = 1
 
 local contentScroll = Instance.new("ScrollingFrame", content)
@@ -116,29 +124,54 @@ cLayout.Padding = UDim.new(0, 8)
 local cPad = Instance.new("UIPadding", contentScroll)
 cPad.PaddingRight = UDim.new(0, 10)
 
--- Dragging
-local dragging, dragInput, dragStart, startPos = false, nil, nil, nil
-main.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = main.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then dragging = false end
-        end)
-    end
-end)
-main.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        local delta = input.Position - dragStart
-        main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-end)
+local circleIcon = Instance.new("ImageButton", screenGui)
+circleIcon.Size = UDim2.new(0, 50, 0, 50)
+circleIcon.Position = UDim2.new(0, 20, 0.5, -25)
+circleIcon.BackgroundColor3 = C.accent
+circleIcon.Image = "rbxassetid://1511976415632031754"
+circleIcon.Visible = false
+circleIcon.ZIndex = 10
+Instance.new("UICorner", circleIcon).CornerRadius = UDim.new(1, 0)
+local cStroke = Instance.new("UIStroke", circleIcon)
+cStroke.Color = C.border
+cStroke.Thickness = 2
 
--- Tab System
+local isMinimized = false
+local function toggleMinimize()
+    isMinimized = not isMinimized
+    main.Visible = not isMinimized
+    circleIcon.Visible = isMinimized
+end
+
+minBtn.MouseButton1Click:Connect(toggleMinimize)
+circleIcon.MouseButton1Click:Connect(toggleMinimize)
+
+local function makeDraggable(frame, handle)
+    local dragging, dragInput, dragStart, startPos = false, nil, nil, nil
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    handle.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+makeDraggable(main, topbar)
+makeDraggable(circleIcon, circleIcon)
+
 local tabs, activeTab = {}, nil
 local function createTab(name)
     local tab = {}
@@ -255,12 +288,16 @@ local function createToggle(tab, text, callback)
         TweenService:Create(bg, TweenInfo.new(0.2), {BackgroundColor3 = color}):Play()
     end
     
-    f.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            state = not state
-            update()
-            callback(state)
-        end
+    local toggleBtn = Instance.new("TextButton", f)
+    toggleBtn.Size = UDim2.new(1, 0, 1, 0)
+    toggleBtn.BackgroundTransparency = 1
+    toggleBtn.Text = ""
+    toggleBtn.ZIndex = 5
+    
+    toggleBtn.MouseButton1Click:Connect(function()
+        state = not state
+        update()
+        callback(state)
     end)
     
     f.MouseEnter:Connect(function() TweenService:Create(f, TweenInfo.new(0.2), {BackgroundColor3 = C.elementHover}):Play() end)
@@ -317,11 +354,19 @@ local function createSlider(tab, text, min, max, default, callback)
     c.BorderSizePixel = 0
     Instance.new("UICorner", c).CornerRadius = UDim.new(1, 0)
     
-    local dragging = false
-    f.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end end)
-    UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
+    local sliderBtn = Instance.new("TextButton", f)
+    sliderBtn.Size = UDim2.new(1, 0, 1, 0)
+    sliderBtn.BackgroundTransparency = 1
+    sliderBtn.Text = ""
+    sliderBtn.ZIndex = 5
+    
+    local draggingSlider = false
+    sliderBtn.MouseButton1Down:Connect(function() draggingSlider = true end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then draggingSlider = false end
+    end)
     UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        if draggingSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local rel = math.clamp((input.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
             local val = math.floor(min + (max - min) * rel)
             vL.Text = tostring(val)
@@ -352,7 +397,6 @@ local function createButton(tab, text, callback)
     f.MouseLeave:Connect(function() TweenService:Create(f, TweenInfo.new(0.2), {BackgroundColor3 = C.accent}):Play() end)
 end
 
--- ================= TABS & ELEMENTS =================
 local tabMain = createTab("Main")
 local tabAuto = createTab("Automation")
 local tabShop = createTab("Shop")
@@ -369,6 +413,8 @@ createToggle(tabMain, "Fly", function(state)
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hrp = char.HumanoidRootPart
     if flyOn then
+        if flyBodyVel then flyBodyVel:Destroy() end
+        if flyBodyGyro then flyBodyGyro:Destroy() end
         flyBodyVel = Instance.new("BodyVelocity")
         flyBodyVel.MaxForce = Vector3.new(1e5, 1e5, 1e5)
         flyBodyVel.Velocity = Vector3.zero
@@ -404,14 +450,11 @@ createToggle(tabAuto, "Auto Steal", function(state) autoStealOn = state end)
 createSection(tabShop, "Market")
 local autoBuyOn = false
 local ShopData = {
-    ["Garden Valley Seeds"] = { Type = "Seeds", Items = {"Carrot", "Strawberry", "Blueberry", "Tulip", "Tomato", "Apple", "Bamboo", "Corn", "Cactus", "Pineapple", "Mushroom", "Green Bean", "Banana Grape", "Coconut", "Mango", "Dragon Fruit", "Acorn", "Cherry", "Sunflower", "Fire Fern", "Venus Flytrap", "Pomegranate", "Poison Apple", "Venom Spitter", "Briar Rose", "Moon Bloom", "Sun Bloom", "Hypno Bloom", "Dragon's Breath", "Star Fruit"} },
-    ["Fall Event Seeds"] = { Type = "Seeds", Items = {"Maple Carrot", "Maple Strawberry", "Maple Blueberry", "Maple Tulip", "Maple Tomato", "Maple Apple", "Maple Bamboo", "Maple Corn", "Maple Cactus", "Maple Pineapple", "Maple Mushroom", "Maple Green Bean", "Maple Banana", "Maple Grape", "Maple Coconut", "Maple Mango", "Maple Dragon Fruit", "Maple Acorn", "Maple Cherry", "Maple Sunflower", "Maple Venus Fly Trap", "Maple Pomegranate", "Maple Poison Apple", "Maple Venom Spitter", "Atlantic Giant Pumpkin", "Conifer Cone", "Amber Cranberry"} },
-    ["Garden Valley Gears"] = { Type = "Gears", Items = {"Common Sprinkler", "Common Watering Can", "Uncommon Sprinkler", "Rare Sprinkler", "Trowel", "Jump Mushroom", "Shrink Mushroom", "Speed Mushroom", "Supersize Mushroom", "Gnome", "Flashbang", "Basic Pot", "Legendary Sprinkler", "Invisibility Mushroom", "Super Watering Can", "Super Sprinkler"} },
-    ["Fall Event Gears"] = { Type = "Gears", Items = {"Syrup Sprinkler", "Syrup Watering Can", "Rare Magic Mail", "Harp", "Legendary Magic Mail", "Super Magic Mail", "Super Syrup Watering Can", "Super Syrup Sprinkler", "Bull Horn", "Wind Staff"} },
-    ["Garden Valley Crates"] = { Type = "Crates", Items = {"Ladder Crate", "Bench Crate", "Light Crate", "Sign Crate", "Arch Crate", "Roleplay Crate", "Picture Frame Crate", "Fourth Of July Crate", "Bridge Crate", "Spring Crate", "Seesaw Crate", "Conveyor Crate", "Boombox Crate", "Owner Door Crate", "Fence Crate", "Teleporter Crate"} },
-    ["Fall Event Crates"] = { Type = "Crates", Items = {"Rake Crate", "Lantern Crate", "Fall Structure Crate", "Fall Cosmetic Crate", "Cobblestone Crate"} }
+    ["Seeds"] = { Type = "Seeds", Items = {"Carrot","Strawberry","Blueberry","Tulip","Tomato","Apple","Bamboo","Corn","Cactus","Pineapple","Mushroom","Green Bean","Banana","Grape","Coconut","Mango","Dragon Fruit","Acorn","Cherry","Sunflower","Venus Fly Trap","Pomegranate","Poison Apple","Moon Bloom","Dragon's Breath","Ghost Pepper","Poison Ivy","Baby Cactus","Glow Mushroom","Romanesco","Horned Melon"} },
+    ["Gears"] = { Type = "Gears", Items = {"Common Watering Can","Common Sprinkler","Sign","Uncommon Sprinkler","Trowel","Rare Sprinkler","Jump Mushroom","Speed Mushroom","Lantern","Shrink Mushroom","Supersize Mushroom","Gnome","Flashbang","Basic Pot","Legendary Sprinkler","Invisibility Mushroom","Teleporter","Wheelbarrow","Super Watering Can","Super Sprinkler"} },
+    ["Crates"] = { Type = "Crates", Items = {"Ladder Crate","Bench Crate","Light Crate","Sign Crate","Arch Crate","Roleplay Crate","Bridge Crate","Spring Crate","Seesaw Crate","Conveyor Crate","Owner Door Crate","Bear Trap Crate","Fence Crate","Teleporter Pad Crate"} }
 }
-local CategoryNames = {"Garden Valley Seeds", "Fall Event Seeds", "Garden Valley Gears", "Fall Event Gears", "Garden Valley Crates", "Fall Event Crates"}
+local CategoryNames = {"Seeds", "Gears", "Crates"}
 local SelectedItems, ActiveBuyList = {}, {}
 for _, cat in ipairs(CategoryNames) do SelectedItems[cat] = {} end
 
@@ -427,7 +470,6 @@ end
 
 createToggle(tabShop, "Auto Buy", function(state) autoBuyOn = state end)
 
--- Popup for Auto Buy
 local popup = Instance.new("Frame", screenGui)
 popup.Size = UDim2.new(0, 360, 0, 400)
 popup.Position = UDim2.new(0.5, -180, 0.5, -200)
@@ -541,14 +583,46 @@ createButton(tabShop, "Setup Auto Buy Items", function()
     openCategoryMenu()
 end)
 
--- ================= MAIN LOOPS & FIXES =================
 RunService.RenderStepped:Connect(function()
     local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = char.HumanoidRootPart
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
     local hum = char:FindFirstChildOfClass("Humanoid")
 
-    if flyOn and flyBodyVel and flyBodyGyro and hum then
+    if hum then
+        if hum.WalkSpeed ~= speedValue then hum.WalkSpeed = speedValue end
+        if antiDamageOn then
+            if hum.Health < hum.MaxHealth then hum.Health = hum.MaxHealth end
+            if not char:FindFirstChildOfClass("ForceField") then
+                local ff = Instance.new("ForceField", char)
+                ff.Visible = false
+            end
+        end
+        if invincibleOn then
+            hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+            for _, obj in pairs(char:GetDescendants()) do
+                if obj:IsA("BasePart") or obj:IsA("Decal") or obj:IsA("Texture") then
+                    if obj.Transparency < 1 then obj.Transparency = 1 end
+                elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
+                    if obj.Enabled then obj.Enabled = false end
+                end
+            end
+        end
+    end
+
+    if flyOn and hrp and hum then
+        if not flyBodyVel or not flyBodyVel.Parent then
+            flyBodyVel = Instance.new("BodyVelocity")
+            flyBodyVel.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+            flyBodyVel.Velocity = Vector3.zero
+            flyBodyVel.Parent = hrp
+        end
+        if not flyBodyGyro or not flyBodyGyro.Parent then
+            flyBodyGyro = Instance.new("BodyGyro")
+            flyBodyGyro.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
+            flyBodyGyro.CFrame = hrp.CFrame
+            flyBodyGyro.Parent = hrp
+        end
         local cam = workspace.CurrentCamera
         local moveDir = hum.MoveDirection
         if moveDir.Magnitude > 0 then
@@ -559,26 +633,31 @@ RunService.RenderStepped:Connect(function()
         end
         flyBodyGyro.CFrame = cam.CFrame
     end
-    
-    if hum and hum.WalkSpeed ~= speedValue then hum.WalkSpeed = speedValue end
+end)
 
-    if invincibleOn then
-        for _, obj in pairs(char:GetDescendants()) do
-            if obj:IsA("BasePart") or obj:IsA("Decal") or obj:IsA("Texture") then
-                if obj.Transparency < 1 then obj.Transparency = 1 end
-            elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
-                if obj.Enabled then obj.Enabled = false end
+LocalPlayer.CharacterAdded:Connect(function(char)
+    local hum = char:WaitForChild("Humanoid", 5)
+    local hrp = char:WaitForChild("HumanoidRootPart", 5)
+    if hum then
+        hum.WalkSpeed = speedValue
+        if invincibleOn then
+            hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+            for _, obj in pairs(char:GetDescendants()) do
+                if obj:IsA("BasePart") or obj:IsA("Decal") or obj:IsA("Texture") then obj.Transparency = 1 end
             end
         end
-        if hum then hum.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None end
     end
-
-    if antiDamageOn and hum then
-        if hum.Health < hum.MaxHealth then hum.Health = hum.MaxHealth end
-        if not char:FindFirstChildOfClass("ForceField") then
-            local ff = Instance.new("ForceField", char)
-            ff.Visible = false
-        end
+    if hrp and flyOn then
+        if flyBodyVel then flyBodyVel:Destroy() end
+        if flyBodyGyro then flyBodyGyro:Destroy() end
+        flyBodyVel = Instance.new("BodyVelocity")
+        flyBodyVel.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+        flyBodyVel.Velocity = Vector3.zero
+        flyBodyVel.Parent = hrp
+        flyBodyGyro = Instance.new("BodyGyro")
+        flyBodyGyro.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
+        flyBodyGyro.CFrame = hrp.CFrame
+        flyBodyGyro.Parent = hrp
     end
 end)
 
@@ -608,24 +687,19 @@ task.spawn(function()
 end)
 
 task.spawn(function()
-    while task.wait(0.3) do
+    while task.wait(0.2) do
         if autoBuyOn and #ActiveBuyList > 0 then
             for _, targetItem in ipairs(ActiveBuyList) do
                 local itemType = targetItem.Type
                 local itemName = targetItem.Item
                 pcall(function()
-                    if itemType == "Seeds" then
-                        local remote = (Net and Net.SeedShop and Net.SeedShop.PurchaseSeed) or findRemote("PurchaseSeed")
-                        if remote then remote:FireServer(itemName) end
+                    if itemType == "Seeds" or itemType == "Crates" then
+                        Packet:FireServer(103, itemName)
                     elseif itemType == "Gears" then
-                        local remote = (Net and Net.GearShop and Net.GearShop.PurchaseGear) or findRemote("PurchaseGear")
-                        if remote then remote:FireServer(itemName) end
-                    elseif itemType == "Crates" then
-                        local remote = (Net and Net.CrateShop and Net.CrateShop.PurchaseCrate) or findRemote("PurchaseCrate")
-                        if remote then remote:FireServer(itemName) end
+                        Packet:FireServer(107, itemName)
                     end
                 end)
-                task.wait(0.05)
+                task.wait(0.2)
             end
         end
     end
