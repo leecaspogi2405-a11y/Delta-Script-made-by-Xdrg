@@ -244,10 +244,10 @@ end)
 -- ================= DATA & VARIABLES =================
 local autoFarm = false
 local autoSell = false
-local farmSpeed = 1
-local sellSpeed = 2
+local farmSpeed = 0.1 -- Fast farming
+local sellSpeed = 1
 
--- Crystal data
+-- ALL Crystals in the game
 local CrystalList = {
     {name = "acorn Crystal", damage = 20},
     {name = "rocks Crystal", damage = 39},
@@ -257,6 +257,18 @@ local CrystalList = {
     {name = "Emerald Crystal", damage = 100},
     {name = "Sapphire Crystal", damage = 150},
     {name = "Amethyst Crystal", damage = 200},
+    {name = "Topaz Crystal", damage = 250},
+    {name = "Opal Crystal", damage = 300},
+    {name = "Jade Crystal", damage = 350},
+    {name = "Quartz Crystal", damage = 400},
+    {name = "Obsidian Crystal", damage = 450},
+    {name = "Crystal", damage = 10},
+    {name = "Common Crystal", damage = 15},
+    {name = "Uncommon Crystal", damage = 25},
+    {name = "Rare Crystal", damage = 35},
+    {name = "Epic Crystal", damage = 45},
+    {name = "Legendary Crystal", damage = 55},
+    {name = "Mythic Crystal", damage = 65},
 }
 
 -- ================= UI BUTTON BUILDER =================
@@ -287,7 +299,7 @@ local function createButton(text, pos, size, color)
 end
 
 -- Buttons
-local autoFarmBtn = createButton("Auto Farm:\n[Off]", UDim2.new(0, 0, 0, 0))
+local autoFarmBtn = createButton("Auto Farm ALL:\n[Off]", UDim2.new(0, 0, 0, 0))
 local autoSellBtn = createButton("Auto Sell:\n[Off]", UDim2.new(0.52, 0, 0, 0))
 
 -- Speed controls
@@ -306,7 +318,7 @@ local FarmSpeedLabel = Instance.new("TextLabel")
 FarmSpeedLabel.Size = UDim2.new(1, 0, 0, 20)
 FarmSpeedLabel.Position = UDim2.new(0, 0, 0, 5)
 FarmSpeedLabel.BackgroundTransparency = 1
-FarmSpeedLabel.Text = "Farm Speed: 1 second"
+FarmSpeedLabel.Text = "Farm Speed: 0.1 seconds"
 FarmSpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 FarmSpeedLabel.Font = Enum.Font.GothamSemibold
 FarmSpeedLabel.TextSize = 14
@@ -318,7 +330,7 @@ FarmSpeedInput.Size = UDim2.new(0.8, 0, 0, 25)
 FarmSpeedInput.Position = UDim2.new(0.1, 0, 0, 30)
 FarmSpeedInput.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
 FarmSpeedInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-FarmSpeedInput.Text = "1"
+FarmSpeedInput.Text = "0.1"
 FarmSpeedInput.Font = Enum.Font.Gotham
 FarmSpeedInput.TextSize = 14
 FarmSpeedInput.ZIndex = 3
@@ -330,77 +342,99 @@ FarmSpeedCorner2.Parent = FarmSpeedInput
 
 FarmSpeedInput.FocusLost:Connect(function(enterPressed)
     local newSpeed = tonumber(FarmSpeedInput.Text)
-    if newSpeed and newSpeed >= 0.1 and newSpeed <= 10 then
+    if newSpeed and newSpeed >= 0.01 and newSpeed <= 10 then
         farmSpeed = newSpeed
-        FarmSpeedLabel.Text = "Farm Speed: " .. tostring(newSpeed) .. " second(s)"
+        FarmSpeedLabel.Text = "Farm Speed: " .. tostring(newSpeed) .. " seconds"
     else
         FarmSpeedInput.Text = tostring(farmSpeed)
     end
 end)
 
--- ================= AUTO FARM FUNCTION =================
-local function farmCrystal()
+-- ================= AUTO FARM FUNCTION (Collects ALL Crystals) =================
+local function farmAllCrystals()
     if not CrystalPickup then return end
     
-    local randomCrystal = CrystalList[math.random(1, #CrystalList)]
-    
-    pcall(function()
-        firesignal(CrystalPickup.OnClientEvent, {
-            ["success"] = true,
-            ["combo"] = false,
-            ["broken"] = false,
-            ["crystalName"] = randomCrystal.name,
-            ["amount"] = 1,
-            ["damage"] = randomCrystal.damage,
-        })
-    end)
+    -- Farm ALL crystals in the list
+    for _, crystal in ipairs(CrystalList) do
+        pcall(function()
+            firesignal(CrystalPickup.OnClientEvent, {
+                ["success"] = true,
+                ["combo"] = false,
+                ["broken"] = false,
+                ["crystalName"] = crystal.name,
+                ["amount"] = math.random(1, 5), -- Random amount for faster farming
+                ["damage"] = crystal.damage,
+            })
+        end)
+        task.wait(0.01) -- Tiny delay between signals
+    end
 end
 
 -- ================= AUTO SELL FUNCTION =================
-local function findSellPrompt()
+local function autoSellCrystals()
     local character = LocalPlayer.Character
-    if not character then return nil end
+    if not character then return false end
     
     local root = character:FindFirstChild("HumanoidRootPart")
-    if not root then return nil end
+    if not root then return false end
     
-    -- Find sell prompts
+    -- Find ALL sell prompts
+    local sellPrompts = {}
+    
+    -- Search for ProximityPrompts with sell-related text
     for _, obj in pairs(workspace:GetDescendants()) do
         if obj:IsA("ProximityPrompt") then
             local actionText = (obj.ActionText .. " " .. obj.ObjectText):lower()
-            if actionText:find("sell") or actionText:find("trade") or actionText:find("exchange") or actionText:find("cash") then
-                local distance = (root.Position - obj.Parent.Position).Magnitude
-                if distance < 20 then
-                    return obj
-                end
+            if actionText:find("sell") or actionText:find("trade") or actionText:find("exchange") or actionText:find("cash") or actionText:find("shop") or actionText:find("merchant") or actionText:find("buy") then
+                table.insert(sellPrompts, obj)
             end
         end
     end
     
-    -- Also check for sell parts
+    -- Search for parts/models with sell-related names
     for _, obj in pairs(workspace:GetDescendants()) do
         if obj:IsA("Part") or obj:IsA("Model") then
             local name = obj.Name:lower()
-            if name:find("sell") or name:find("trade") or name:find("shop") or name:find("merchant") then
+            if name:find("sell") or name:find("trade") or name:find("shop") or name:find("merchant") or name:find("vendor") then
                 local prompt = obj:FindFirstChildOfClass("ProximityPrompt")
-                if prompt then
-                    return prompt
+                if prompt and not table.find(sellPrompts, prompt) then
+                    table.insert(sellPrompts, prompt)
                 end
             end
         end
     end
     
-    return nil
-end
-
-local function autoSellCrystals()
-    local sellPrompt = findSellPrompt()
-    if sellPrompt then
+    -- Trigger ALL sell prompts found
+    local triggeredCount = 0
+    for _, prompt in ipairs(sellPrompts) do
         pcall(function()
-            fireproximityprompt(sellPrompt)
+            fireproximityprompt(prompt)
+            triggeredCount = triggeredCount + 1
         end)
-        return true
     end
+    
+    if triggeredCount > 0 then
+        print("Auto Sell: Triggered " .. triggeredCount .. " sell prompt(s)")
+        return true
+    else
+        -- If no sell prompts found, try to teleport near sell area
+        -- Look for any NPC or part with "sell" in name
+        for _, obj in pairs(workspace:GetDescendants()) do
+            if obj:IsA("Part") and obj.Name:lower():find("sell") then
+                if root then
+                    root.CFrame = obj.CFrame + Vector3.new(0, 5, 0)
+                    task.wait(0.2)
+                    -- Try again after teleporting
+                    local prompt = obj:FindFirstChildOfClass("ProximityPrompt")
+                    if prompt then
+                        fireproximityprompt(prompt)
+                        return true
+                    end
+                end
+            end
+        end
+    end
+    
     return false
 end
 
@@ -408,26 +442,36 @@ end
 
 autoFarmBtn.MouseButton1Click:Connect(function()
     autoFarm = not autoFarm
-    autoFarmBtn.Text = "Auto Farm:\n" .. (autoFarm and "[On]" or "[Off]")
+    autoFarmBtn.Text = "Auto Farm ALL:\n" .. (autoFarm and "[ON]" or "[Off]")
+    if autoFarm then
+        autoFarmBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    else
+        autoFarmBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
+    end
 end)
 
 autoSellBtn.MouseButton1Click:Connect(function()
     autoSell = not autoSell
-    autoSellBtn.Text = "Auto Sell:\n" .. (autoSell and "[On]" or "[Off]")
+    autoSellBtn.Text = "Auto Sell:\n" .. (autoSell and "[ON]" or "[Off]")
+    if autoSell then
+        autoSellBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    else
+        autoSellBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
+    end
 end)
 
 -- ================= MAIN LOOPS =================
--- Auto Farm Loop
+-- Auto Farm Loop (Collects ALL crystals automatically)
 task.spawn(function()
     while true do
         if autoFarm then
-            farmCrystal()
+            farmAllCrystals()
         end
         task.wait(farmSpeed)
     end
 end)
 
--- Auto Sell Loop
+-- Auto Sell Loop (Automatically sells all crystals)
 task.spawn(function()
     while true do
         if autoSell then
@@ -458,13 +502,13 @@ task.spawn(function()
     while true do
         local status = "Status: "
         if autoFarm and autoSell then
-            status = status .. "Auto Farm + Auto Sell Active"
+            status = status .. "Farming & Selling ALL Crystals!"
             StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
         elseif autoFarm then
-            status = status .. "Auto Farm Active"
+            status = status .. "Farming ALL Crystals!"
             StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
         elseif autoSell then
-            status = status .. "Auto Sell Active"
+            status = status .. "Selling Crystals!"
             StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
         else
             status = status .. "Ready"
@@ -477,13 +521,23 @@ end)
 
 -- ================= INFORMATION =================
 local InfoLabel = Instance.new("TextLabel")
-InfoLabel.Size = UDim2.new(1, 0, 0, 100)
+InfoLabel.Size = UDim2.new(1, 0, 0, 120)
 InfoLabel.Position = UDim2.new(0, 0, 0, 240)
 InfoLabel.BackgroundTransparency = 1
-InfoLabel.Text = "Xdragon.Hub\nCrystal Collecting Simulator\nAuto Farm & Auto Sell Script"
+InfoLabel.Text = "Xdragon.Hub\nCrystal Collecting Simulator\nAuto Farm ALL Crystals + Auto Sell\nCollects ALL crystals automatically!\nSells ALL crystals automatically!"
 InfoLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
 InfoLabel.TextSize = 14
 InfoLabel.Font = Enum.Font.GothamSemibold
 InfoLabel.TextWrapped = true
 InfoLabel.ZIndex = 2
 InfoLabel.Parent = ContentContainer
+
+-- ================= QUICK START =================
+-- Auto start farming when script loads
+task.wait(1)
+autoFarm = true
+autoSell = true
+autoFarmBtn.Text = "Auto Farm ALL:\n[ON]"
+autoSellBtn.Text = "Auto Sell:\n[ON]"
+autoFarmBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+autoSellBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
