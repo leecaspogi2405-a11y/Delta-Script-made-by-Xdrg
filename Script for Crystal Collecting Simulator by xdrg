@@ -123,7 +123,7 @@ local ContentContainer = Instance.new("ScrollingFrame")
 ContentContainer.Size = UDim2.new(1, -20, 1, -70)
 ContentContainer.Position = UDim2.new(0, 10, 0, 65)
 ContentContainer.BackgroundTransparency = 1
-ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 350)
+ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 300)
 ContentContainer.ScrollBarThickness = 3
 ContentContainer.ScrollBarImageColor3 = Color3.fromRGB(0, 150, 255)
 ContentContainer.ZIndex = 2
@@ -244,8 +244,6 @@ end)
 -- ================= DATA & VARIABLES =================
 local autoFarm = false
 local autoSell = false
-local farmSpeed = 0.1
-local sellSpeed = 0.5
 
 -- ================= UI BUTTON BUILDER =================
 local function createButton(text, pos, size, color)
@@ -278,53 +276,21 @@ end
 local autoFarmBtn = createButton("Auto Farm ALL:\n[Off]", UDim2.new(0, 0, 0, 0))
 local autoSellBtn = createButton("Auto Sell ALL:\n[Off]", UDim2.new(0.52, 0, 0, 0))
 
--- Speed controls
-local FarmSpeedFrame = Instance.new("Frame")
-FarmSpeedFrame.Size = UDim2.new(1, 0, 0, 60)
-FarmSpeedFrame.Position = UDim2.new(0, 0, 0, 100)
-FarmSpeedFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-FarmSpeedFrame.ZIndex = 2
-FarmSpeedFrame.Parent = ContentContainer
+-- Status display
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(1, 0, 0, 60)
+StatusLabel.Position = UDim2.new(0, 0, 0, 100)
+StatusLabel.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+StatusLabel.Text = "Status: Ready"
+StatusLabel.Font = Enum.Font.GothamSemibold
+StatusLabel.TextSize = 16
+StatusLabel.ZIndex = 2
+StatusLabel.Parent = ContentContainer
 
-local FarmSpeedCorner = Instance.new("UICorner")
-FarmSpeedCorner.CornerRadius = UDim.new(0, 10)
-FarmSpeedCorner.Parent = FarmSpeedFrame
-
-local FarmSpeedLabel = Instance.new("TextLabel")
-FarmSpeedLabel.Size = UDim2.new(1, 0, 0, 20)
-FarmSpeedLabel.Position = UDim2.new(0, 0, 0, 5)
-FarmSpeedLabel.BackgroundTransparency = 1
-FarmSpeedLabel.Text = "Farm Speed: 0.1 seconds"
-FarmSpeedLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-FarmSpeedLabel.Font = Enum.Font.GothamSemibold
-FarmSpeedLabel.TextSize = 14
-FarmSpeedLabel.ZIndex = 3
-FarmSpeedLabel.Parent = FarmSpeedFrame
-
-local FarmSpeedInput = Instance.new("TextBox")
-FarmSpeedInput.Size = UDim2.new(0.8, 0, 0, 25)
-FarmSpeedInput.Position = UDim2.new(0.1, 0, 0, 30)
-FarmSpeedInput.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
-FarmSpeedInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-FarmSpeedInput.Text = "0.1"
-FarmSpeedInput.Font = Enum.Font.Gotham
-FarmSpeedInput.TextSize = 14
-FarmSpeedInput.ZIndex = 3
-FarmSpeedInput.Parent = FarmSpeedFrame
-
-local FarmSpeedCorner2 = Instance.new("UICorner")
-FarmSpeedCorner2.CornerRadius = UDim.new(0, 5)
-FarmSpeedCorner2.Parent = FarmSpeedInput
-
-FarmSpeedInput.FocusLost:Connect(function(enterPressed)
-    local newSpeed = tonumber(FarmSpeedInput.Text)
-    if newSpeed and newSpeed >= 0.01 and newSpeed <= 10 then
-        farmSpeed = newSpeed
-        FarmSpeedLabel.Text = "Farm Speed: " .. tostring(newSpeed) .. " seconds"
-    else
-        FarmSpeedInput.Text = tostring(farmSpeed)
-    end
-end)
+local StatusCorner = Instance.new("UICorner")
+StatusCorner.CornerRadius = UDim.new(0, 10)
+StatusCorner.Parent = StatusLabel
 
 -- ================= AUTO FARM FUNCTION (Fires ALL Mining ProximityPrompts) =================
 local function farmAllCrystals()
@@ -394,11 +360,11 @@ local function farmAllCrystals()
     return firedPrompts
 end
 
--- ================= AUTO SELL FUNCTION (Fires ALL Sell Prompts with HUGE Range) =================
+-- ================= AUTO SELL FUNCTION (Fires ALL Sell Prompts - NO DISTANCE LIMIT) =================
 local function autoSellCrystals()
     local firedSellPrompts = 0
     
-    -- Fire ALL sell prompts with 999 billion range
+    -- Fire ALL sell prompts - NO DISTANCE CHECK (999 billion range)
     for _, obj in pairs(workspace:GetDescendants()) do
         if obj:IsA("ProximityPrompt") then
             local actionText = (obj.ActionText .. " " .. obj.ObjectText):lower()
@@ -455,41 +421,25 @@ autoSellBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ================= MAIN LOOPS =================
--- Auto Farm Loop
+-- Auto Farm Loop (HOLD - fires continuously without delay)
 task.spawn(function()
     while true do
         if autoFarm then
             farmAllCrystals()
         end
-        task.wait(farmSpeed)
+        task.wait() -- No delay, just yields for next frame
     end
 end)
 
--- Auto Sell Loop
+-- Auto Sell Loop (HOLD - fires continuously without delay)
 task.spawn(function()
     while true do
         if autoSell then
             autoSellCrystals()
         end
-        task.wait(sellSpeed)
+        task.wait() -- No delay, just yields for next frame
     end
 end)
-
--- ================= STATUS DISPLAY =================
-local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Size = UDim2.new(1, 0, 0, 60)
-StatusLabel.Position = UDim2.new(0, 0, 0, 170)
-StatusLabel.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-StatusLabel.Text = "Status: Ready"
-StatusLabel.Font = Enum.Font.GothamSemibold
-StatusLabel.TextSize = 16
-StatusLabel.ZIndex = 2
-StatusLabel.Parent = ContentContainer
-
-local StatusCorner = Instance.new("UICorner")
-StatusCorner.CornerRadius = UDim.new(0, 10)
-StatusCorner.Parent = StatusLabel
 
 -- Update status
 task.spawn(function()
