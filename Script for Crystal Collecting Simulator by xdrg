@@ -244,6 +244,7 @@ end)
 -- ================= DATA & VARIABLES =================
 local autoFarm = false
 local autoSell = false
+local farmHoldTime = 20 -- 20 seconds hold for auto farm
 
 -- ================= UI BUTTON BUILDER =================
 local function createButton(text, pos, size, color)
@@ -360,11 +361,11 @@ local function farmAllCrystals()
     return firedPrompts
 end
 
--- ================= AUTO SELL FUNCTION (Fires ALL Sell Prompts - NO DISTANCE LIMIT) =================
+-- ================= AUTO SELL FUNCTION (Fires ALL Sell Prompts - INSTANT) =================
 local function autoSellCrystals()
     local firedSellPrompts = 0
     
-    -- Fire ALL sell prompts - NO DISTANCE CHECK (999 billion range)
+    -- Fire ALL sell prompts - NO DISTANCE CHECK, INSTANT
     for _, obj in pairs(workspace:GetDescendants()) do
         if obj:IsA("ProximityPrompt") then
             local actionText = (obj.ActionText .. " " .. obj.ObjectText):lower()
@@ -421,23 +422,29 @@ autoSellBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ================= MAIN LOOPS =================
--- Auto Farm Loop (HOLD - fires continuously without delay)
+-- Auto Farm Loop (20 SECONDS hold/delay)
 task.spawn(function()
     while true do
         if autoFarm then
             farmAllCrystals()
+            -- 20 seconds hold
+            task.wait(farmHoldTime)
+        else
+            task.wait()
         end
-        task.wait() -- No delay, just yields for next frame
     end
 end)
 
--- Auto Sell Loop (HOLD - fires continuously without delay)
+-- Auto Sell Loop (INSTANT - no hold, fires immediately)
 task.spawn(function()
     while true do
         if autoSell then
             autoSellCrystals()
+            -- Instant - no delay
+            task.wait()
+        else
+            task.wait()
         end
-        task.wait() -- No delay, just yields for next frame
     end
 end)
 
@@ -446,13 +453,13 @@ task.spawn(function()
     while true do
         local status = "Status: "
         if autoFarm and autoSell then
-            status = status .. "Farming & Selling ALL!"
+            status = status .. "Farming (20s Hold) & Selling (Instant)!"
             StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
         elseif autoFarm then
-            status = status .. "Farming ALL!"
+            status = status .. "Farming ALL (20s Hold)!"
             StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
         elseif autoSell then
-            status = status .. "Selling ALL!"
+            status = status .. "Selling ALL (Instant)!"
             StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
         else
             status = status .. "Ready"
