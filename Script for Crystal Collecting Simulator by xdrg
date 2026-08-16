@@ -33,8 +33,8 @@ end
 -- Main Frame
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 420, 0, 550)
-MainFrame.Position = UDim2.new(0.5, -210, 0.5, -275)
+MainFrame.Size = UDim2.new(0, 420, 0, 450)
+MainFrame.Position = UDim2.new(0.5, -210, 0.5, -225)
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -123,7 +123,7 @@ local ContentContainer = Instance.new("ScrollingFrame")
 ContentContainer.Size = UDim2.new(1, -20, 1, -70)
 ContentContainer.Position = UDim2.new(0, 10, 0, 65)
 ContentContainer.BackgroundTransparency = 1
-ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 600)
+ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 350)
 ContentContainer.ScrollBarThickness = 3
 ContentContainer.ScrollBarImageColor3 = Color3.fromRGB(0, 150, 255)
 ContentContainer.ZIndex = 2
@@ -244,32 +244,8 @@ end)
 -- ================= DATA & VARIABLES =================
 local autoFarm = false
 local autoSell = false
-local farmSpeed = 0.1 -- Fast farming
-local sellSpeed = 1
-
--- ALL Crystals in the game
-local CrystalList = {
-    {name = "acorn Crystal", damage = 20},
-    {name = "rocks Crystal", damage = 39},
-    {name = "mushroom Crystal", damage = 14},
-    {name = "Diamond Crystal", damage = 50},
-    {name = "Ruby Crystal", damage = 75},
-    {name = "Emerald Crystal", damage = 100},
-    {name = "Sapphire Crystal", damage = 150},
-    {name = "Amethyst Crystal", damage = 200},
-    {name = "Topaz Crystal", damage = 250},
-    {name = "Opal Crystal", damage = 300},
-    {name = "Jade Crystal", damage = 350},
-    {name = "Quartz Crystal", damage = 400},
-    {name = "Obsidian Crystal", damage = 450},
-    {name = "Crystal", damage = 10},
-    {name = "Common Crystal", damage = 15},
-    {name = "Uncommon Crystal", damage = 25},
-    {name = "Rare Crystal", damage = 35},
-    {name = "Epic Crystal", damage = 45},
-    {name = "Legendary Crystal", damage = 55},
-    {name = "Mythic Crystal", damage = 65},
-}
+local farmSpeed = 0.1
+local sellSpeed = 0.5
 
 -- ================= UI BUTTON BUILDER =================
 local function createButton(text, pos, size, color)
@@ -300,7 +276,7 @@ end
 
 -- Buttons
 local autoFarmBtn = createButton("Auto Farm ALL:\n[Off]", UDim2.new(0, 0, 0, 0))
-local autoSellBtn = createButton("Auto Sell:\n[Off]", UDim2.new(0.52, 0, 0, 0))
+local autoSellBtn = createButton("Auto Sell ALL:\n[Off]", UDim2.new(0.52, 0, 0, 0))
 
 -- Speed controls
 local FarmSpeedFrame = Instance.new("Frame")
@@ -350,92 +326,110 @@ FarmSpeedInput.FocusLost:Connect(function(enterPressed)
     end
 end)
 
--- ================= AUTO FARM FUNCTION (Collects ALL Crystals) =================
+-- ================= AUTO FARM FUNCTION (Fires ALL Mining ProximityPrompts) =================
 local function farmAllCrystals()
-    if not CrystalPickup then return end
+    -- Fire ALL mining/crystal proximity prompts in the workspace
+    local firedPrompts = 0
     
-    -- Farm ALL crystals in the list
-    for _, crystal in ipairs(CrystalList) do
-        pcall(function()
-            firesignal(CrystalPickup.OnClientEvent, {
-                ["success"] = true,
-                ["combo"] = false,
-                ["broken"] = false,
-                ["crystalName"] = crystal.name,
-                ["amount"] = math.random(1, 5), -- Random amount for faster farming
-                ["damage"] = crystal.damage,
-            })
-        end)
-        task.wait(0.01) -- Tiny delay between signals
-    end
-end
-
--- ================= AUTO SELL FUNCTION =================
-local function autoSellCrystals()
-    local character = LocalPlayer.Character
-    if not character then return false end
-    
-    local root = character:FindFirstChild("HumanoidRootPart")
-    if not root then return false end
-    
-    -- Find ALL sell prompts
-    local sellPrompts = {}
-    
-    -- Search for ProximityPrompts with sell-related text
     for _, obj in pairs(workspace:GetDescendants()) do
         if obj:IsA("ProximityPrompt") then
             local actionText = (obj.ActionText .. " " .. obj.ObjectText):lower()
-            if actionText:find("sell") or actionText:find("trade") or actionText:find("exchange") or actionText:find("cash") or actionText:find("shop") or actionText:find("merchant") or actionText:find("buy") then
-                table.insert(sellPrompts, obj)
+            
+            -- Check for various mining prompt patterns
+            local isMiningPrompt = false
+            
+            -- Check for "mine" variations
+            if actionText:find("mine") then
+                isMiningPrompt = true
+            end
+            
+            -- Check for crystal mining patterns
+            if actionText:find("mine") and (actionText:find("crystal") or actionText:find("rock") or actionText:find("ore") or actionText:find("gem") or actionText:find("acorn") or actionText:find("mushroom") or actionText:find("diamond") or actionText:find("ruby") or actionText:find("emerald") or actionText:find("sapphire") or actionText:find("amethyst") or actionText:find("topaz") or actionText:find("opal") or actionText:find("jade") or actionText:find("quartz") or actionText:find("obsidian")) then
+                isMiningPrompt = true
+            end
+            
+            -- Check for crystal name patterns
+            if actionText:find("acorn") or actionText:find("rocks") or actionText:find("mushroom") or actionText:find("crystal") then
+                if actionText:find("mine") or actionText:find("collect") or actionText:find("gather") or actionText:find("pick") or actionText:find("harvest") or actionText:find("dig") or actionText:find("extract") then
+                    isMiningPrompt = true
+                end
+            end
+            
+            -- Fire the prompt if it's a mining prompt
+            if isMiningPrompt then
+                pcall(function()
+                    fireproximityprompt(obj)
+                    firedPrompts = firedPrompts + 1
+                end)
             end
         end
     end
     
-    -- Search for parts/models with sell-related names
+    -- Also fire the CrystalPickup remote for all crystals
+    if CrystalPickup then
+        local CrystalList = {
+            "acorn Crystal", "rocks Crystal", "mushroom Crystal",
+            "Diamond Crystal", "Ruby Crystal", "Emerald Crystal",
+            "Sapphire Crystal", "Amethyst Crystal", "Topaz Crystal",
+            "Opal Crystal", "Jade Crystal", "Quartz Crystal",
+            "Obsidian Crystal", "Common Crystal", "Uncommon Crystal",
+            "Rare Crystal", "Epic Crystal", "Legendary Crystal",
+            "Mythic Crystal"
+        }
+        
+        for _, crystalName in ipairs(CrystalList) do
+            pcall(function()
+                firesignal(CrystalPickup.OnClientEvent, {
+                    ["success"] = true,
+                    ["combo"] = false,
+                    ["broken"] = false,
+                    ["crystalName"] = crystalName,
+                    ["amount"] = math.random(1, 5),
+                    ["damage"] = math.random(10, 100),
+                })
+            end)
+        end
+    end
+    
+    return firedPrompts
+end
+
+-- ================= AUTO SELL FUNCTION (Fires ALL Sell Prompts with HUGE Range) =================
+local function autoSellCrystals()
+    local firedSellPrompts = 0
+    
+    -- Fire ALL sell prompts with 999 billion range
+    for _, obj in pairs(workspace:GetDescendants()) do
+        if obj:IsA("ProximityPrompt") then
+            local actionText = (obj.ActionText .. " " .. obj.ObjectText):lower()
+            
+            -- Check for sell-related keywords
+            if actionText:find("sell") or actionText:find("trade") or actionText:find("exchange") or actionText:find("cash") or actionText:find("shop") or actionText:find("merchant") or actionText:find("buy") or actionText:find("vendor") or actionText:find("market") or actionText:find("store") then
+                pcall(function()
+                    fireproximityprompt(obj)
+                    firedSellPrompts = firedSellPrompts + 1
+                end)
+            end
+        end
+    end
+    
+    -- Also check for sell parts/models and fire their prompts
     for _, obj in pairs(workspace:GetDescendants()) do
         if obj:IsA("Part") or obj:IsA("Model") then
             local name = obj.Name:lower()
-            if name:find("sell") or name:find("trade") or name:find("shop") or name:find("merchant") or name:find("vendor") then
+            if name:find("sell") or name:find("trade") or name:find("shop") or name:find("merchant") or name:find("vendor") or name:find("market") then
                 local prompt = obj:FindFirstChildOfClass("ProximityPrompt")
-                if prompt and not table.find(sellPrompts, prompt) then
-                    table.insert(sellPrompts, prompt)
-                end
-            end
-        end
-    end
-    
-    -- Trigger ALL sell prompts found
-    local triggeredCount = 0
-    for _, prompt in ipairs(sellPrompts) do
-        pcall(function()
-            fireproximityprompt(prompt)
-            triggeredCount = triggeredCount + 1
-        end)
-    end
-    
-    if triggeredCount > 0 then
-        print("Auto Sell: Triggered " .. triggeredCount .. " sell prompt(s)")
-        return true
-    else
-        -- If no sell prompts found, try to teleport near sell area
-        -- Look for any NPC or part with "sell" in name
-        for _, obj in pairs(workspace:GetDescendants()) do
-            if obj:IsA("Part") and obj.Name:lower():find("sell") then
-                if root then
-                    root.CFrame = obj.CFrame + Vector3.new(0, 5, 0)
-                    task.wait(0.2)
-                    -- Try again after teleporting
-                    local prompt = obj:FindFirstChildOfClass("ProximityPrompt")
-                    if prompt then
+                if prompt then
+                    pcall(function()
                         fireproximityprompt(prompt)
-                        return true
-                    end
+                        firedSellPrompts = firedSellPrompts + 1
+                    end)
                 end
             end
         end
     end
     
-    return false
+    return firedSellPrompts
 end
 
 -- ================= TOGGLE MECHANICS =================
@@ -452,7 +446,7 @@ end)
 
 autoSellBtn.MouseButton1Click:Connect(function()
     autoSell = not autoSell
-    autoSellBtn.Text = "Auto Sell:\n" .. (autoSell and "[ON]" or "[Off]")
+    autoSellBtn.Text = "Auto Sell ALL:\n" .. (autoSell and "[ON]" or "[Off]")
     if autoSell then
         autoSellBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
     else
@@ -461,7 +455,7 @@ autoSellBtn.MouseButton1Click:Connect(function()
 end)
 
 -- ================= MAIN LOOPS =================
--- Auto Farm Loop (Collects ALL crystals automatically)
+-- Auto Farm Loop
 task.spawn(function()
     while true do
         if autoFarm then
@@ -471,7 +465,7 @@ task.spawn(function()
     end
 end)
 
--- Auto Sell Loop (Automatically sells all crystals)
+-- Auto Sell Loop
 task.spawn(function()
     while true do
         if autoSell then
@@ -502,13 +496,13 @@ task.spawn(function()
     while true do
         local status = "Status: "
         if autoFarm and autoSell then
-            status = status .. "Farming & Selling ALL Crystals!"
+            status = status .. "Farming & Selling ALL!"
             StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
         elseif autoFarm then
-            status = status .. "Farming ALL Crystals!"
+            status = status .. "Farming ALL!"
             StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
         elseif autoSell then
-            status = status .. "Selling Crystals!"
+            status = status .. "Selling ALL!"
             StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
         else
             status = status .. "Ready"
@@ -519,25 +513,12 @@ task.spawn(function()
     end
 end)
 
--- ================= INFORMATION =================
-local InfoLabel = Instance.new("TextLabel")
-InfoLabel.Size = UDim2.new(1, 0, 0, 120)
-InfoLabel.Position = UDim2.new(0, 0, 0, 240)
-InfoLabel.BackgroundTransparency = 1
-InfoLabel.Text = "Xdragon.Hub\nCrystal Collecting Simulator\nAuto Farm ALL Crystals + Auto Sell\nCollects ALL crystals automatically!\nSells ALL crystals automatically!"
-InfoLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-InfoLabel.TextSize = 14
-InfoLabel.Font = Enum.Font.GothamSemibold
-InfoLabel.TextWrapped = true
-InfoLabel.ZIndex = 2
-InfoLabel.Parent = ContentContainer
-
 -- ================= QUICK START =================
 -- Auto start farming when script loads
 task.wait(1)
 autoFarm = true
 autoSell = true
 autoFarmBtn.Text = "Auto Farm ALL:\n[ON]"
-autoSellBtn.Text = "Auto Sell:\n[ON]"
+autoSellBtn.Text = "Auto Sell ALL:\n[ON]"
 autoFarmBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
 autoSellBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
