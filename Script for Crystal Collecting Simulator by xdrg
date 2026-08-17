@@ -33,8 +33,8 @@ end
 -- Main Frame
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 420, 0, 450)
-MainFrame.Position = UDim2.new(0.5, -210, 0.5, -225)
+MainFrame.Size = UDim2.new(0, 420, 0, 500)
+MainFrame.Position = UDim2.new(0.5, -210, 0.5, -250)
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -123,7 +123,7 @@ local ContentContainer = Instance.new("ScrollingFrame")
 ContentContainer.Size = UDim2.new(1, -20, 1, -70)
 ContentContainer.Position = UDim2.new(0, 10, 0, 65)
 ContentContainer.BackgroundTransparency = 1
-ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 300)
+ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 400)
 ContentContainer.ScrollBarThickness = 3
 ContentContainer.ScrollBarImageColor3 = Color3.fromRGB(0, 150, 255)
 ContentContainer.ZIndex = 2
@@ -244,7 +244,8 @@ end)
 -- ================= DATA & VARIABLES =================
 local autoFarm = false
 local autoSell = false
-local farmHoldTime = 20 -- 20 seconds hold for auto farm
+local autoTeleport = false
+local farmHoldTime = 20 -- Default 20 seconds, adjustable 1-20
 
 -- ================= UI BUTTON BUILDER =================
 local function createButton(text, pos, size, color)
@@ -276,11 +277,60 @@ end
 -- Buttons
 local autoFarmBtn = createButton("Auto Farm ALL:\n[Off]", UDim2.new(0, 0, 0, 0))
 local autoSellBtn = createButton("Auto Sell ALL:\n[Off]", UDim2.new(0.52, 0, 0, 0))
+local autoTeleportBtn = createButton("Auto Teleport:\n[Off]", UDim2.new(0, 0, 0, 100), UDim2.new(1, 0, 0, 40))
+
+-- Hold time control
+local HoldTimeFrame = Instance.new("Frame")
+HoldTimeFrame.Size = UDim2.new(1, 0, 0, 60)
+HoldTimeFrame.Position = UDim2.new(0, 0, 0, 150)
+HoldTimeFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+HoldTimeFrame.ZIndex = 2
+HoldTimeFrame.Parent = ContentContainer
+
+local HoldTimeCorner = Instance.new("UICorner")
+HoldTimeCorner.CornerRadius = UDim.new(0, 10)
+HoldTimeCorner.Parent = HoldTimeFrame
+
+local HoldTimeLabel = Instance.new("TextLabel")
+HoldTimeLabel.Size = UDim2.new(1, 0, 0, 20)
+HoldTimeLabel.Position = UDim2.new(0, 0, 0, 5)
+HoldTimeLabel.BackgroundTransparency = 1
+HoldTimeLabel.Text = "Farm Hold Time: 20 seconds (1-20)"
+HoldTimeLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+HoldTimeLabel.Font = Enum.Font.GothamSemibold
+HoldTimeLabel.TextSize = 14
+HoldTimeLabel.ZIndex = 3
+HoldTimeLabel.Parent = HoldTimeFrame
+
+local HoldTimeInput = Instance.new("TextBox")
+HoldTimeInput.Size = UDim2.new(0.8, 0, 0, 25)
+HoldTimeInput.Position = UDim2.new(0.1, 0, 0, 30)
+HoldTimeInput.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+HoldTimeInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+HoldTimeInput.Text = "20"
+HoldTimeInput.Font = Enum.Font.Gotham
+HoldTimeInput.TextSize = 14
+HoldTimeInput.ZIndex = 3
+HoldTimeInput.Parent = HoldTimeFrame
+
+local HoldTimeCorner2 = Instance.new("UICorner")
+HoldTimeCorner2.CornerRadius = UDim.new(0, 5)
+HoldTimeCorner2.Parent = HoldTimeInput
+
+HoldTimeInput.FocusLost:Connect(function(enterPressed)
+    local newHoldTime = tonumber(HoldTimeInput.Text)
+    if newHoldTime and newHoldTime >= 1 and newHoldTime <= 20 then
+        farmHoldTime = newHoldTime
+        HoldTimeLabel.Text = "Farm Hold Time: " .. tostring(newHoldTime) .. " seconds (1-20)"
+    else
+        HoldTimeInput.Text = tostring(farmHoldTime)
+    end
+end)
 
 -- Status display
 local StatusLabel = Instance.new("TextLabel")
 StatusLabel.Size = UDim2.new(1, 0, 0, 60)
-StatusLabel.Position = UDim2.new(0, 0, 0, 100)
+StatusLabel.Position = UDim2.new(0, 0, 0, 220)
 StatusLabel.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
 StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
 StatusLabel.Text = "Status: Ready"
@@ -293,7 +343,37 @@ local StatusCorner = Instance.new("UICorner")
 StatusCorner.CornerRadius = UDim.new(0, 10)
 StatusCorner.Parent = StatusLabel
 
--- ================= AUTO FARM FUNCTION (Fires ALL Mining ProximityPrompts) =================
+-- ================= TELEPORT FUNCTION =================
+local function teleportToPrompt(prompt)
+    local character = LocalPlayer.Character
+    if not character then return false end
+    
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root then return false end
+    
+    local promptParent = prompt.Parent
+    if promptParent then
+        local targetPosition = nil
+        
+        if promptParent:IsA("BasePart") then
+            targetPosition = promptParent.Position
+        elseif promptParent:IsA("Model") then
+            local primaryPart = promptParent.PrimaryPart
+            if primaryPart then
+                targetPosition = primaryPart.Position
+            end
+        end
+        
+        if targetPosition then
+            root.CFrame = CFrame.new(targetPosition + Vector3.new(0, 3, 0))
+            return true
+        end
+    end
+    
+    return false
+end
+
+-- ================= AUTO FARM FUNCTION (Fires ALL Mining ProximityPrompts with Auto Teleport) =================
 local function farmAllCrystals()
     -- Fire ALL mining/crystal proximity prompts in the workspace
     local firedPrompts = 0
@@ -324,6 +404,11 @@ local function farmAllCrystals()
             
             -- Fire the prompt if it's a mining prompt
             if isMiningPrompt then
+                -- Auto teleport to prompt if enabled
+                if autoTeleport then
+                    teleportToPrompt(obj)
+                end
+                
                 pcall(function()
                     fireproximityprompt(obj)
                     firedPrompts = firedPrompts + 1
@@ -361,7 +446,7 @@ local function farmAllCrystals()
     return firedPrompts
 end
 
--- ================= AUTO SELL FUNCTION (Fires ALL Sell Prompts - INSTANT) =================
+-- ================= AUTO SELL FUNCTION (Fires ALL Sell Prompts with Auto Teleport) =================
 local function autoSellCrystals()
     local firedSellPrompts = 0
     
@@ -372,6 +457,11 @@ local function autoSellCrystals()
             
             -- Check for sell-related keywords
             if actionText:find("sell") or actionText:find("trade") or actionText:find("exchange") or actionText:find("cash") or actionText:find("shop") or actionText:find("merchant") or actionText:find("buy") or actionText:find("vendor") or actionText:find("market") or actionText:find("store") then
+                -- Auto teleport to sell prompt if enabled
+                if autoTeleport then
+                    teleportToPrompt(obj)
+                end
+                
                 pcall(function()
                     fireproximityprompt(obj)
                     firedSellPrompts = firedSellPrompts + 1
@@ -387,6 +477,11 @@ local function autoSellCrystals()
             if name:find("sell") or name:find("trade") or name:find("shop") or name:find("merchant") or name:find("vendor") or name:find("market") then
                 local prompt = obj:FindFirstChildOfClass("ProximityPrompt")
                 if prompt then
+                    -- Auto teleport to sell prompt if enabled
+                    if autoTeleport then
+                        teleportToPrompt(prompt)
+                    end
+                    
                     pcall(function()
                         fireproximityprompt(prompt)
                         firedSellPrompts = firedSellPrompts + 1
@@ -421,13 +516,23 @@ autoSellBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+autoTeleportBtn.MouseButton1Click:Connect(function()
+    autoTeleport = not autoTeleport
+    autoTeleportBtn.Text = "Auto Teleport:\n" .. (autoTeleport and "[ON]" or "[Off]")
+    if autoTeleport then
+        autoTeleportBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    else
+        autoTeleportBtn.BackgroundColor3 = Color3.fromRGB(0, 180, 255)
+    end
+end)
+
 -- ================= MAIN LOOPS =================
--- Auto Farm Loop (20 SECONDS hold/delay)
+-- Auto Farm Loop (Adjustable hold time: 1-20 seconds)
 task.spawn(function()
     while true do
         if autoFarm then
             farmAllCrystals()
-            -- 20 seconds hold
+            -- Adjustable hold time (1-20 seconds)
             task.wait(farmHoldTime)
         else
             task.wait()
@@ -453,10 +558,10 @@ task.spawn(function()
     while true do
         local status = "Status: "
         if autoFarm and autoSell then
-            status = status .. "Farming (20s Hold) & Selling (Instant)!"
+            status = status .. "Farming (" .. tostring(farmHoldTime) .. "s Hold) & Selling (Instant)!"
             StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
         elseif autoFarm then
-            status = status .. "Farming ALL (20s Hold)!"
+            status = status .. "Farming ALL (" .. tostring(farmHoldTime) .. "s Hold)!"
             StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
         elseif autoSell then
             status = status .. "Selling ALL (Instant)!"
@@ -465,6 +570,11 @@ task.spawn(function()
             status = status .. "Ready"
             StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
         end
+        
+        if autoTeleport then
+            status = status .. " [TP ON]"
+        end
+        
         StatusLabel.Text = status
         task.wait(0.5)
     end
