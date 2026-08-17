@@ -34,8 +34,8 @@ end
 -- ==================== MODERN UI ====================
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 450, 0, 600)
-MainFrame.Position = UDim2.new(0.5, -225, 0.5, -300)
+MainFrame.Size = UDim2.new(0, 480, 0, 620)
+MainFrame.Position = UDim2.new(0.5, -240, 0.5, -310)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -102,7 +102,7 @@ HeaderCorner.CornerRadius = UDim.new(0, 14)
 HeaderCorner.Parent = Header
 
 local LogoText = Instance.new("TextLabel")
-LogoText.Size = UDim2.new(0.6, 0, 1, 0)
+LogoText.Size = UDim2.new(0.7, 0, 1, 0)
 LogoText.Position = UDim2.new(0.05, 0, 0, 0)
 LogoText.BackgroundTransparency = 1
 LogoText.Text = "🤖 XDRAGON HUB AI"
@@ -113,32 +113,10 @@ LogoText.TextXAlignment = Enum.TextXAlignment.Left
 LogoText.ZIndex = 3
 LogoText.Parent = Header
 
-local StatusDot = Instance.new("Frame")
-StatusDot.Size = UDim2.new(0, 10, 0, 10)
-StatusDot.Position = UDim2.new(1, -45, 0.5, -5)
-StatusDot.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-StatusDot.ZIndex = 3
-StatusDot.Parent = Header
-
-local StatusCorner = Instance.new("UICorner")
-StatusCorner.CornerRadius = UDim.new(1, 0)
-StatusCorner.Parent = StatusDot
-
-local StatusText = Instance.new("TextLabel")
-StatusText.Size = UDim2.new(0, 30, 0, 20)
-StatusText.Position = UDim2.new(1, -40, 0.5, -10)
-StatusText.BackgroundTransparency = 1
-StatusText.Text = "AI"
-StatusText.TextColor3 = Color3.fromRGB(255, 255, 255)
-StatusText.TextSize = 12
-StatusText.Font = Enum.Font.GothamBold
-StatusText.ZIndex = 3
-StatusText.Parent = Header
-
 -- Minimize Button
 local MinimizeBtn = Instance.new("TextButton")
 MinimizeBtn.Size = UDim2.new(0, 35, 0, 35)
-MinimizeBtn.Position = UDim2.new(1, -80, 0.5, -17)
+MinimizeBtn.Position = UDim2.new(1, -50, 0.5, -17)
 MinimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
 MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 MinimizeBtn.Text = "—"
@@ -151,74 +129,10 @@ local MinimizeCorner = Instance.new("UICorner")
 MinimizeCorner.CornerRadius = UDim.new(0, 8)
 MinimizeCorner.Parent = MinimizeBtn
 
--- ==================== MODEL SELECTOR ====================
-local ModelFrame = Instance.new("Frame")
-ModelFrame.Size = UDim2.new(1, -20, 0, 80)
-ModelFrame.Position = UDim2.new(0, 10, 0, 80)
-ModelFrame.BackgroundTransparency = 1
-ModelFrame.ZIndex = 2
-ModelFrame.Parent = InnerFrame
-
-local ModelLabel = Instance.new("TextLabel")
-ModelLabel.Size = UDim2.new(1, 0, 0, 25)
-ModelLabel.BackgroundTransparency = 1
-ModelLabel.Text = "SELECT XDRAGON AI MODEL"
-ModelLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
-ModelLabel.TextSize = 12
-ModelLabel.Font = Enum.Font.GothamBold
-ModelLabel.TextXAlignment = Enum.TextXAlignment.Left
-ModelLabel.ZIndex = 2
-ModelLabel.Parent = ModelFrame
-
--- Model buttons
-local Models = {
-    {Name = "Xdrg Lite", ID = "lite", Color = Color3.fromRGB(116, 185, 255), Pos = UDim2.new(0, 0, 0, 30)},
-    {Name = "Xdrg Flash", ID = "flash", Color = Color3.fromRGB(255, 234, 167), Pos = UDim2.new(0.34, 0, 0, 30)},
-    {Name = "Xdrg Coder", ID = "coder", Color = Color3.fromRGB(162, 155, 254), Pos = UDim2.new(0.68, 0, 0, 30)}
-}
-
-local selectedModel = "lite"
-local modelButtons = {}
-
-for _, model in ipairs(Models) do
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.32, 0, 0, 40)
-    btn.Position = model.Pos
-    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Text = model.Name
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 13
-    btn.ZIndex = 2
-    btn.Parent = ModelFrame
-    
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 8)
-    btnCorner.Parent = btn
-    
-    local btnStroke = Instance.new("UIStroke")
-    btnStroke.Color = model.Color
-    btnStroke.Thickness = 2
-    btnStroke.Transparency = 0.7
-    btnStroke.Parent = btn
-    
-    btn.MouseButton1Click:Connect(function()
-        selectedModel = model.ID
-        for _, b in pairs(modelButtons) do
-            b.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-            b.TextColor3 = Color3.fromRGB(255, 255, 255)
-        end
-        btn.BackgroundColor3 = model.Color
-        btn.TextColor3 = Color3.fromRGB(0, 0, 0)
-    end)
-    
-    table.insert(modelButtons, btn)
-end
-
 -- ==================== CHAT CONTAINER ====================
 local ChatFrame = Instance.new("ScrollingFrame")
-ChatFrame.Size = UDim2.new(1, -20, 1, -260)
-ChatFrame.Position = UDim2.new(0, 10, 0, 170)
+ChatFrame.Size = UDim2.new(1, -20, 1, -170)
+ChatFrame.Position = UDim2.new(0, 10, 0, 80)
 ChatFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 ChatFrame.BorderSizePixel = 0
 ChatFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -238,19 +152,15 @@ ChatLayout.Parent = ChatFrame
 
 -- Welcome message
 local WelcomeMsg = Instance.new("TextLabel")
-WelcomeMsg.Size = UDim2.new(0.9, 0, 0, 80)
-WelcomeMsg.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-WelcomeMsg.TextColor3 = Color3.fromRGB(255, 255, 255)
-WelcomeMsg.Text = "🤖 Welcome to Xdragon Hub AI!\nPowered by Xdrg AI Technology\nDescribe what you want to create, and I'll generate the Roblox script for you!"
+WelcomeMsg.Size = UDim2.new(0.9, 0, 0, 100)
+WelcomeMsg.BackgroundTransparency = 1
+WelcomeMsg.TextColor3 = Color3.fromRGB(200, 200, 200)
+WelcomeMsg.Text = "🤖 Xdragon Hub AI\n\nTalk to me naturally! I will understand what you want and generate the script for you.\n\nExamples:\n- 'make me run fast'\n- 'I want to fly'\n- 'create a teleport system'\n- 'gawan mo ako ng speed boost'\n- 'kailangan ko ng combat system'"
 WelcomeMsg.Font = Enum.Font.Gotham
-WelcomeMsg.TextSize = 14
+WelcomeMsg.TextSize = 13
 WelcomeMsg.TextWrapped = true
 WelcomeMsg.ZIndex = 2
 WelcomeMsg.Parent = ChatFrame
-
-local WelcomeCorner = Instance.new("UICorner")
-WelcomeCorner.CornerRadius = UDim.new(0, 8)
-WelcomeCorner.Parent = WelcomeMsg
 
 -- ==================== INPUT AREA ====================
 local InputFrame = Instance.new("Frame")
@@ -266,16 +176,17 @@ InputCorner.CornerRadius = UDim.new(0, 10)
 InputCorner.Parent = InputFrame
 
 local InputBox = Instance.new("TextBox")
-InputBox.Size = UDim2.new(1, -60, 0, 40)
+InputBox.Size = UDim2.new(1, -60, 0, 60)
 InputBox.Position = UDim2.new(0, 10, 0, 10)
 InputBox.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
 InputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-InputBox.PlaceholderText = "Describe your script... (e.g., 'speed boost script')"
+InputBox.PlaceholderText = "Tell me what you want... (English or Tagalog)"
 InputBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
 InputBox.Text = ""
 InputBox.Font = Enum.Font.Gotham
 InputBox.TextSize = 14
 InputBox.TextXAlignment = Enum.TextXAlignment.Left
+InputBox.TextWrapped = true
 InputBox.ZIndex = 3
 InputBox.Parent = InputFrame
 
@@ -284,13 +195,13 @@ InputCorner2.CornerRadius = UDim.new(0, 8)
 InputCorner2.Parent = InputBox
 
 local SendBtn = Instance.new("TextButton")
-SendBtn.Size = UDim2.new(0, 40, 0, 40)
-SendBtn.Position = UDim2.new(1, -50, 0, 10)
+SendBtn.Size = UDim2.new(0, 50, 0, 60)
+SendBtn.Position = UDim2.new(1, -60, 0, 10)
 SendBtn.BackgroundColor3 = Color3.fromRGB(108, 92, 231)
 SendBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 SendBtn.Text = "🚀"
 SendBtn.Font = Enum.Font.GothamBold
-SendBtn.TextSize = 20
+SendBtn.TextSize = 24
 SendBtn.ZIndex = 3
 SendBtn.Parent = InputFrame
 
@@ -300,8 +211,8 @@ SendCorner.Parent = SendBtn
 
 -- Loading indicator
 local LoadingFrame = Instance.new("Frame")
-LoadingFrame.Size = UDim2.new(1, -20, 0, 30)
-LoadingFrame.Position = UDim2.new(0, 10, 1, -120)
+LoadingFrame.Size = UDim2.new(1, -20, 0, 40)
+LoadingFrame.Position = UDim2.new(0, 10, 1, -140)
 LoadingFrame.BackgroundTransparency = 1
 LoadingFrame.Visible = false
 LoadingFrame.ZIndex = 2
@@ -310,138 +221,36 @@ LoadingFrame.Parent = InnerFrame
 local LoadingText = Instance.new("TextLabel")
 LoadingText.Size = UDim2.new(1, 0, 1, 0)
 LoadingText.BackgroundTransparency = 1
-LoadingText.Text = "🤖 Xdrg AI is generating... Please wait..."
-LoadingText.TextColor3 = Color3.fromRGB(255, 255, 255)
+LoadingText.Text = "🤖 Xdrg AI is thinking..."
+LoadingText.TextColor3 = Color3.fromRGB(255, 200, 0)
 LoadingText.TextSize = 14
 LoadingText.Font = Enum.Font.GothamBold
 LoadingText.ZIndex = 2
 LoadingText.Parent = LoadingFrame
 
--- ==================== XDRAGON AI ENGINE ====================
-local function generateLocalScript(prompt)
-    local lowerPrompt = prompt:lower()
-    
-    if lowerPrompt:find("speed") or lowerPrompt:find("boost") or lowerPrompt:find("fast") then
-        return [[-- Speed Boost Script
--- Generated by Xdragon Hub AI
-local Players = game:GetService("Players")
-
-local SPEED_MULTIPLIER = 2
-
-local function applySpeedBoost(player)
-    local character = player.Character
-    if character then
-        local humanoid = character:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            humanoid.WalkSpeed = 16 * SPEED_MULTIPLIER
-        end
-    end
-end
-
-Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function()
-        task.wait(1)
-        applySpeedBoost(player)
-    end)
-end)]]
-    elseif lowerPrompt:find("teleport") or lowerPrompt:find("tp") then
-        return [[-- Teleport System
--- Generated by Xdragon Hub AI
-local Players = game:GetService("Players")
-
-local LOCATIONS = {
-    Spawn = Vector3.new(0, 10, 0),
-    Shop = Vector3.new(100, 10, 50)
-}
-
-local function teleport(player, location)
-    local char = player.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame = CFrame.new(LOCATIONS[location] or LOCATIONS.Spawn)
-    end
-end
-
-Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function()
-        task.wait(2)
-        teleport(player, "Spawn")
-    end)
-end)]]
-    elseif lowerPrompt:find("fly") then
-        return [[-- Fly Script
--- Generated by Xdragon Hub AI
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-
-local FLY_SPEED = 50
-
-Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function(char)
-        local root = char:WaitForChild("HumanoidRootPart")
-        local humanoid = char:WaitForChild("Humanoid")
-        
-        local bodyVelocity = Instance.new("BodyVelocity")
-        bodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-        bodyVelocity.Parent = root
-        
-        local bodyGyro = Instance.new("BodyGyro")
-        bodyGyro.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
-        bodyGyro.Parent = root
-        
-        RunService.Heartbeat:Connect(function()
-            local camera = workspace.CurrentCamera
-            if humanoid.MoveDirection.Magnitude > 0 then
-                bodyVelocity.Velocity = (camera.CFrame.LookVector * humanoid.MoveDirection.Z + camera.CFrame.RightVector * humanoid.MoveDirection.X) * FLY_SPEED
-            else
-                bodyVelocity.Velocity = Vector3.zero
-            end
-            bodyGyro.CFrame = camera.CFrame
-        end)
-    end)
-end)]]
-    elseif lowerPrompt:find("combat") or lowerPrompt:find("damage") or lowerPrompt:find("attack") then
-        return [[-- Combat System
--- Generated by Xdragon Hub AI
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local attackEvent = Instance.new("RemoteEvent")
-attackEvent.Name = "AttackEvent"
-attackEvent.Parent = ReplicatedStorage
-
-local DAMAGE = 10
-
-attackEvent.OnServerEvent:Connect(function(player, target)
-    if target and target.Character then
-        local humanoid = target.Character:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            humanoid:TakeDamage(DAMAGE)
-        end
-    end
-end)]]
-    else
-        return [[-- Custom Script
--- Generated by Xdragon Hub AI
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
--- Your custom logic here
-print("Xdragon Hub AI Script loaded!")
-
-Players.PlayerAdded:Connect(function(player)
-    print(player.Name .. " joined!")
-end)]]
-    end
-end
-
-local function generateWithXdrgAI(prompt)
+-- ==================== AI FUNCTION - DIRECT AI UNDERSTANDING ====================
+local function askXdrgAI(prompt)
     LoadingFrame.Visible = true
+    
+    local systemPrompt = [[You are Xdrg AI from Xdragon Hub, an expert Roblox Lua scripter. You understand BOTH English and Tagalog/Filipino. You can understand natural language requests and generate appropriate Roblox Lua scripts. You must ONLY return Lua code, no explanations.
+
+If the user asks for something in Tagalog, understand it and generate the appropriate script.
+Examples:
+- "gusto ko mabilis tumakbo" = speed boost script
+- "gawan mo ako ng teleport" = teleport script
+- "kailangan ko ng sword fighting" = combat script
+- "make me fly" = fly script
+- "bigyan mo ako ng shop system" = shop script
+- "I want to be invisible" = invisibility script
+- "gumawa ka ng leaderboard" = leaderboard script
+
+Generate a complete, working Roblox Lua script based on the user's request. Make sure the script actually works in Roblox.]]
     
     local success, result = pcall(function()
         local response = HttpService:PostAsync(
             XDRAGON_AI_ENDPOINT,
             HttpService:JSONEncode({
-                inputs = "<s>[INST] You are Xdrg AI, a Roblox Lua scripting expert from Xdragon Hub. Generate a complete, working Roblox Lua script for: " .. prompt .. ". Return ONLY the Lua code without explanations. [/INST]"
+                inputs = "<s>[INST] " .. systemPrompt .. "\n\nUser request: " .. prompt .. " [/INST]"
             }),
             Enum.HttpContentType.ApplicationJson,
             false,
@@ -455,17 +264,21 @@ local function generateWithXdrgAI(prompt)
     LoadingFrame.Visible = false
     
     if success and result then
-        local data = HttpService:JSONDecode(result)
-        if data and data[1] and data[1].generated_text then
-            local generated = data[1].generated_text
-            -- Extract code if wrapped in markdown
-            local codeMatch = generated:match("```lua\n(.-)```") or generated:match("```\n(.-)```")
-            return codeMatch or generated
-        end
+        pcall(function()
+            local data = HttpService:JSONDecode(result)
+            if data and data[1] and data[1].generated_text then
+                local generated = data[1].generated_text
+                -- Extract code from response
+                local codeMatch = generated:match("```lua\n(.-)```") or 
+                                  generated:match("```\n(.-)```") or
+                                  generated:match("local.-") or
+                                  generated
+                return codeMatch
+            end
+        end)
     end
     
-    -- Fallback to local generation
-    return generateLocalScript(prompt)
+    return nil
 end
 
 -- ==================== CHAT FUNCTIONS ====================
@@ -491,7 +304,7 @@ end
 
 local function addCodeBlock(code)
     local codeFrame = Instance.new("Frame")
-    codeFrame.Size = UDim2.new(0.9, 0, 0, 200)
+    codeFrame.Size = UDim2.new(0.9, 0, 0, 250)
     codeFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
     codeFrame.ZIndex = 2
     codeFrame.Parent = ChatFrame
@@ -526,7 +339,7 @@ local function addCodeBlock(code)
     codeBox.Size = UDim2.new(1, -20, 1, -45)
     codeBox.Position = UDim2.new(0, 10, 0, 40)
     codeBox.BackgroundTransparency = 1
-    codeBox.CanvasSize = UDim2.new(0, 0, 0, 500)
+    codeBox.CanvasSize = UDim2.new(0, 0, 0, 600)
     codeBox.ScrollBarThickness = 3
     codeBox.ZIndex = 2
     codeBox.Parent = codeFrame
@@ -557,13 +370,18 @@ local function sendPrompt()
     InputBox.Text = ""
     
     task.spawn(function()
-        local code = generateWithXdrgAI(prompt)
-        addMessage("Here's your Xdrg AI generated script:", false)
-        addCodeBlock(code)
+        local code = askXdrgAI(prompt)
+        if code and code ~= "" then
+            addMessage("Here's your script:", false)
+            addCodeBlock(code)
+        else
+            addMessage("Sorry, I couldn't generate the script. Please try again with a different description.", false)
+        end
     end)
 end
 
 SendBtn.MouseButton1Click:Connect(sendPrompt)
+
 InputBox.FocusLost:Connect(function(enterPressed)
     if enterPressed then
         sendPrompt()
@@ -634,18 +452,5 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- ==================== ANIMATIONS ====================
-StatusDot.Position = UDim2.new(1, -45, 0.5, -5)
-
-task.spawn(function()
-    while true do
-        StatusDot.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-        task.wait(0.5)
-        StatusDot.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
-        task.wait(0.5)
-    end
-end)
-
-print("🤖 Xdragon Hub AI loaded successfully!")
-print("🧠 Xdrg AI Engine activated!")
-print("💾 Models: Xdrg Lite, Xdrg Flash, Xdrg Coder")
+print("🤖 Xdragon Hub AI loaded!")
+print("🧠 AI will understand and generate scripts directly!")
