@@ -32,7 +32,7 @@ local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 420, 0, 600)
 MainFrame.Position = UDim2.new(0.5, -210, 0.5, -300)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.ClipsDescendants = true
@@ -51,6 +51,15 @@ BorderFrame.BorderSizePixel = 0
 BorderFrame.ZIndex = 0
 BorderFrame.Parent = MainFrame
 
+local BorderGradient = Instance.new("UIGradient")
+BorderGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 100, 0)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 200, 0)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 100, 0))
+})
+BorderGradient.Rotation = 45
+BorderGradient.Parent = BorderFrame
+
 local BorderCorner = Instance.new("UICorner")
 BorderCorner.CornerRadius = UDim.new(0, 16)
 BorderCorner.Parent = BorderFrame
@@ -58,7 +67,7 @@ BorderCorner.Parent = BorderFrame
 local InnerFrame = Instance.new("Frame")
 InnerFrame.Size = UDim2.new(1, -4, 1, -4)
 InnerFrame.Position = UDim2.new(0, 2, 0, 2)
-InnerFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+InnerFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 InnerFrame.BorderSizePixel = 0
 InnerFrame.ZIndex = 1
 InnerFrame.Parent = MainFrame
@@ -74,6 +83,13 @@ Header.BackgroundColor3 = Color3.fromRGB(255, 100, 0)
 Header.BorderSizePixel = 0
 Header.ZIndex = 2
 Header.Parent = InnerFrame
+
+local HeaderGradient = Instance.new("UIGradient")
+HeaderGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 100, 0)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 150, 50))
+})
+HeaderGradient.Parent = Header
 
 local HeaderCorner = Instance.new("UICorner")
 HeaderCorner.CornerRadius = UDim.new(0, 14)
@@ -111,7 +127,7 @@ local ContentContainer = Instance.new("ScrollingFrame")
 ContentContainer.Size = UDim2.new(1, -20, 1, -70)
 ContentContainer.Position = UDim2.new(0, 10, 0, 65)
 ContentContainer.BackgroundTransparency = 1
-ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 1400)
+ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 500)
 ContentContainer.ScrollBarThickness = 4
 ContentContainer.ScrollBarImageColor3 = Color3.fromRGB(255, 100, 0)
 ContentContainer.ZIndex = 2
@@ -157,53 +173,18 @@ local AutoBuyItems = {
 }
 
 local AdminCategories = {
-    {
-        Name = "Common",
-        Items = {
-            "Bananita Dolphinita",
-            "Trippi Troppi",
-            "Gangster Footera"
-        }
-    },
-    {
-        Name = "Rare",
-        Items = {
-            "Ballerina Cappuccina",
-            "Svinina Boombardino",
-            "Bombombini Gusini"
-        }
-    },
-    {
-        Name = "Legendary",
-        Items = {
-            "Cappuccino Assassino",
-            "La Vacca Saturno"
-        }
-    },
-    {
-        Name = "Mythic",
-        Items = {
-            "Crab Chef",
-            "Matteo",
-            "Tralalero Tralala"
-        }
-    },
-    {
-        Name = "Godly",
-        Items = {
-            "Giraffa Celestre",
-            "Six Seven",
-            "Odin Din Din Dun"
-        }
-    },
-    {
-        Name = "Limited",
-        Items = {
-            "Strawberry Elephant",
-            "Summerini Fattini"
-        }
-    }
+    {Name = "Common", Items = {"Bananita Dolphinita", "Trippi Troppi", "Gangster Footera"}},
+    {Name = "Rare", Items = {"Ballerina Cappuccina", "Svinina Boombardino", "Bombombini Gusini"}},
+    {Name = "Legendary", Items = {"Cappuccino Assassino", "La Vacca Saturno"}},
+    {Name = "Mythic", Items = {"Crab Chef", "Matteo", "Tralalero Tralala"}},
+    {Name = "Godly", Items = {"Giraffa Celestre", "Six Seven", "Odin Din Din Dun"}},
+    {Name = "Limited", Items = {"Strawberry Elephant", "Summerini Fattini"}}
 }
+
+-- Default all auto buy items selected
+for _, item in ipairs(AutoBuyItems) do
+    selectedAutoBuyItems[item] = true
+end
 
 -- ==================== UI BUTTON BUILDER ====================
 local function createButton(text, pos, size, color)
@@ -229,7 +210,7 @@ end
 local MoneyFrame = Instance.new("Frame")
 MoneyFrame.Size = UDim2.new(1, 0, 0, 70)
 MoneyFrame.Position = UDim2.new(0, 0, 0, 0)
-MoneyFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+MoneyFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 MoneyFrame.ZIndex = 2
 MoneyFrame.Parent = ContentContainer
 
@@ -323,46 +304,209 @@ flyBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- ==================== PCS INPUT ====================
-local PcsFrame = Instance.new("Frame")
-PcsFrame.Size = UDim2.new(1, 0, 0, 50)
-PcsFrame.Position = UDim2.new(0, 0, 0, 140)
-PcsFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-PcsFrame.ZIndex = 2
-PcsFrame.Parent = ContentContainer
+-- ==================== AUTO BUY BUTTON (With Popup) ====================
+local autoBuyBtn = createButton("🛒 Auto Buy: [OFF]", UDim2.new(0, 0, 0, 140), UDim2.new(0.48, 0, 0, 50))
+local autoBuyItemsBtn = createButton("📋 Auto Buy Items", UDim2.new(0.52, 0, 0, 140), UDim2.new(0.48, 0, 0, 50), Color3.fromRGB(0, 150, 255))
 
-local PcsCorner = Instance.new("UICorner")
-PcsCorner.CornerRadius = UDim.new(0, 10)
-PcsCorner.Parent = PcsFrame
+autoBuyBtn.MouseButton1Click:Connect(function()
+    autoBuyOn = not autoBuyOn
+    autoBuyBtn.Text = "🛒 Auto Buy: [" .. (autoBuyOn and "ON" or "OFF") .. "]"
+    autoBuyBtn.BackgroundColor3 = autoBuyOn and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 100, 0)
+end)
 
+-- Auto Buy Items Popup
+local AutoBuyPopup = Instance.new("Frame")
+AutoBuyPopup.Size = UDim2.new(0, 380, 0, 350)
+AutoBuyPopup.Position = UDim2.new(0.5, -190, 0.5, -175)
+AutoBuyPopup.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+AutoBuyPopup.Visible = false
+AutoBuyPopup.ZIndex = 10
+AutoBuyPopup.Parent = ScreenGui
+
+local AutoBuyPopupCorner = Instance.new("UICorner")
+AutoBuyPopupCorner.CornerRadius = UDim.new(0, 12)
+AutoBuyPopupCorner.Parent = AutoBuyPopup
+
+local AutoBuyPopupTitle = Instance.new("TextLabel")
+AutoBuyPopupTitle.Size = UDim2.new(1, 0, 0, 40)
+AutoBuyPopupTitle.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+AutoBuyPopupTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoBuyPopupTitle.Text = "🛒 SELECT AUTO BUY ITEMS"
+AutoBuyPopupTitle.Font = Enum.Font.GothamBold
+AutoBuyPopupTitle.TextSize = 16
+AutoBuyPopupTitle.ZIndex = 11
+AutoBuyPopupTitle.Parent = AutoBuyPopup
+
+local AutoBuyPopupTitleCorner = Instance.new("UICorner")
+AutoBuyPopupTitleCorner.CornerRadius = UDim.new(0, 12)
+AutoBuyPopupTitleCorner.Parent = AutoBuyPopupTitle
+
+local CloseAutoBuyPopup = Instance.new("TextButton")
+CloseAutoBuyPopup.Size = UDim2.new(0, 30, 0, 30)
+CloseAutoBuyPopup.Position = UDim2.new(1, -35, 0, 5)
+CloseAutoBuyPopup.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+CloseAutoBuyPopup.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseAutoBuyPopup.Text = "X"
+CloseAutoBuyPopup.Font = Enum.Font.GothamBold
+CloseAutoBuyPopup.TextSize = 18
+CloseAutoBuyPopup.ZIndex = 11
+CloseAutoBuyPopup.Parent = AutoBuyPopup
+
+local CloseAutoBuyCorner = Instance.new("UICorner")
+CloseAutoBuyCorner.CornerRadius = UDim.new(0, 6)
+CloseAutoBuyCorner.Parent = CloseAutoBuyPopup
+
+local AutoBuyScroll = Instance.new("ScrollingFrame")
+AutoBuyScroll.Size = UDim2.new(1, -20, 1, -50)
+AutoBuyScroll.Position = UDim2.new(0, 10, 0, 45)
+AutoBuyScroll.BackgroundTransparency = 1
+AutoBuyScroll.CanvasSize = UDim2.new(0, 0, 0, #AutoBuyItems * 40)
+AutoBuyScroll.ScrollBarThickness = 3
+AutoBuyScroll.ZIndex = 11
+AutoBuyScroll.Parent = AutoBuyPopup
+
+local AutoBuyLayout = Instance.new("UIListLayout")
+AutoBuyLayout.Padding = UDim.new(0, 5)
+AutoBuyLayout.Parent = AutoBuyScroll
+
+autoBuyItemsBtn.MouseButton1Click:Connect(function()
+    AutoBuyPopup.Visible = true
+end)
+
+CloseAutoBuyPopup.MouseButton1Click:Connect(function()
+    AutoBuyPopup.Visible = false
+end)
+
+-- Create Auto Buy item buttons in popup
+for _, item in ipairs(AutoBuyItems) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 35)
+    btn.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+    btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+    btn.Text = "✅ " .. item
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 13
+    btn.ZIndex = 11
+    btn.Parent = AutoBuyScroll
+    
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 5)
+    btnCorner.Parent = btn
+    
+    btn.MouseButton1Click:Connect(function()
+        selectedAutoBuyItems[item] = not selectedAutoBuyItems[item]
+        if selectedAutoBuyItems[item] then
+            btn.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+            btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+            btn.Text = "✅ " .. item
+        else
+            btn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            btn.Text = "❌ " .. item
+        end
+    end)
+end
+
+-- ==================== AUTO BUY SPEED ====================
+local autoBuySpeedBtn = createButton("⚡ AutoBuySpeed", UDim2.new(0, 0, 0, 200), UDim2.new(0.48, 0, 0, 50), Color3.fromRGB(255, 150, 0))
+
+autoBuySpeedBtn.MouseButton1Click:Connect(function()
+    autoBuySpeedOn = not autoBuySpeedOn
+    autoBuySpeedBtn.Text = "⚡ AutoBuySpeed: [" .. (autoBuySpeedOn and "ON" or "OFF") .. "]"
+    autoBuySpeedBtn.BackgroundColor3 = autoBuySpeedOn and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 150, 0)
+end)
+
+-- ==================== ADMIN SPAWN BUTTON (With Popup) ====================
+local adminSpawnBtn = createButton("👑 Admin Spawn", UDim2.new(0, 0, 0, 260), UDim2.new(1, 0, 0, 50), Color3.fromRGB(255, 200, 0))
+
+local AdminPopup = Instance.new("Frame")
+AdminPopup.Size = UDim2.new(0, 380, 0, 450)
+AdminPopup.Position = UDim2.new(0.5, -190, 0.5, -225)
+AdminPopup.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+AdminPopup.Visible = false
+AdminPopup.ZIndex = 10
+AdminPopup.Parent = ScreenGui
+
+local AdminPopupCorner = Instance.new("UICorner")
+AdminPopupCorner.CornerRadius = UDim.new(0, 12)
+AdminPopupCorner.Parent = AdminPopup
+
+local AdminPopupTitle = Instance.new("TextLabel")
+AdminPopupTitle.Size = UDim2.new(1, 0, 0, 40)
+AdminPopupTitle.BackgroundColor3 = Color3.fromRGB(255, 200, 0)
+AdminPopupTitle.TextColor3 = Color3.fromRGB(0, 0, 0)
+AdminPopupTitle.Text = "👑 ADMIN SPAWN"
+AdminPopupTitle.Font = Enum.Font.GothamBold
+AdminPopupTitle.TextSize = 16
+AdminPopupTitle.ZIndex = 11
+AdminPopupTitle.Parent = AdminPopup
+
+local AdminPopupTitleCorner = Instance.new("UICorner")
+AdminPopupTitleCorner.CornerRadius = UDim.new(0, 12)
+AdminPopupTitleCorner.Parent = AdminPopupTitle
+
+local CloseAdminPopup = Instance.new("TextButton")
+CloseAdminPopup.Size = UDim2.new(0, 30, 0, 30)
+CloseAdminPopup.Position = UDim2.new(1, -35, 0, 5)
+CloseAdminPopup.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+CloseAdminPopup.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseAdminPopup.Text = "X"
+CloseAdminPopup.Font = Enum.Font.GothamBold
+CloseAdminPopup.TextSize = 18
+CloseAdminPopup.ZIndex = 11
+CloseAdminPopup.Parent = AdminPopup
+
+local CloseAdminCorner = Instance.new("UICorner")
+CloseAdminCorner.CornerRadius = UDim.new(0, 6)
+CloseAdminCorner.Parent = CloseAdminPopup
+
+local AdminScroll = Instance.new("ScrollingFrame")
+AdminScroll.Size = UDim2.new(1, -20, 1, -110)
+AdminScroll.Position = UDim2.new(0, 10, 0, 100)
+AdminScroll.BackgroundTransparency = 1
+AdminScroll.CanvasSize = UDim2.new(0, 0, 0, 800)
+AdminScroll.ScrollBarThickness = 3
+AdminScroll.ZIndex = 11
+AdminScroll.Parent = AdminPopup
+
+local AdminLayout = Instance.new("UIListLayout")
+AdminLayout.Padding = UDim.new(0, 5)
+AdminLayout.Parent = AdminScroll
+
+adminSpawnBtn.MouseButton1Click:Connect(function()
+    AdminPopup.Visible = true
+end)
+
+CloseAdminPopup.MouseButton1Click:Connect(function()
+    AdminPopup.Visible = false
+end)
+
+-- Controls inside Admin Popup
 local PcsLabel = Instance.new("TextLabel")
-PcsLabel.Size = UDim2.new(0.4, 0, 1, 0)
-PcsLabel.Position = UDim2.new(0.05, 0, 0, 0)
+PcsLabel.Size = UDim2.new(0.3, 0, 0, 30)
+PcsLabel.Position = UDim2.new(0.05, 0, 0, 45)
 PcsLabel.BackgroundTransparency = 1
-PcsLabel.Text = "📦 PCS Amount:"
+PcsLabel.Text = "📦 PCS:"
 PcsLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 PcsLabel.TextSize = 14
 PcsLabel.Font = Enum.Font.GothamBold
-PcsLabel.TextXAlignment = Enum.TextXAlignment.Left
-PcsLabel.ZIndex = 3
-PcsLabel.Parent = PcsFrame
+PcsLabel.ZIndex = 11
+PcsLabel.Parent = AdminPopup
 
 local PcsInput = Instance.new("TextBox")
-PcsInput.Size = UDim2.new(0.5, 0, 0, 30)
-PcsInput.Position = UDim2.new(0.45, 0, 0, 10)
+PcsInput.Size = UDim2.new(0.6, 0, 0, 30)
+PcsInput.Position = UDim2.new(0.35, 0, 0, 45)
 PcsInput.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
 PcsInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-PcsInput.PlaceholderText = "1"
-PcsInput.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
 PcsInput.Text = "1"
 PcsInput.Font = Enum.Font.Gotham
 PcsInput.TextSize = 14
-PcsInput.ZIndex = 3
-PcsInput.Parent = PcsFrame
+PcsInput.ZIndex = 11
+PcsInput.Parent = AdminPopup
 
-local PcsInputCorner = Instance.new("UICorner")
-PcsInputCorner.CornerRadius = UDim.new(0, 5)
-PcsInputCorner.Parent = PcsInput
+local PcsCorner = Instance.new("UICorner")
+PcsCorner.CornerRadius = UDim.new(0, 5)
+PcsCorner.Parent = PcsInput
 
 PcsInput.FocusLost:Connect(function()
     local val = tonumber(PcsInput.Text)
@@ -373,207 +517,79 @@ PcsInput.FocusLost:Connect(function()
     end
 end)
 
--- ==================== AREA SELECTION ====================
-local AreaFrame = Instance.new("Frame")
-AreaFrame.Size = UDim2.new(1, 0, 0, 50)
-AreaFrame.Position = UDim2.new(0, 0, 0, 200)
-AreaFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-AreaFrame.ZIndex = 2
-AreaFrame.Parent = ContentContainer
-
-local AreaCorner = Instance.new("UICorner")
-AreaCorner.CornerRadius = UDim.new(0, 10)
-AreaCorner.Parent = AreaFrame
-
-local AreaLabel = Instance.new("TextLabel")
-AreaLabel.Size = UDim2.new(0.4, 0, 1, 0)
-AreaLabel.Position = UDim2.new(0.05, 0, 0, 0)
-AreaLabel.BackgroundTransparency = 1
-AreaLabel.Text = "📍 Area:"
-AreaLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-AreaLabel.TextSize = 14
-AreaLabel.Font = Enum.Font.GothamBold
-AreaLabel.TextXAlignment = Enum.TextXAlignment.Left
-AreaLabel.ZIndex = 3
-AreaLabel.Parent = AreaFrame
-
 local AreaDropdown = Instance.new("TextButton")
-AreaDropdown.Size = UDim2.new(0.5, 0, 0, 30)
-AreaDropdown.Position = UDim2.new(0.45, 0, 0, 10)
+AreaDropdown.Size = UDim2.new(0.45, 0, 0, 30)
+AreaDropdown.Position = UDim2.new(0.05, 0, 0, 80)
 AreaDropdown.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
 AreaDropdown.TextColor3 = Color3.fromRGB(255, 255, 255)
-AreaDropdown.Text = selectedArea
+AreaDropdown.Text = "📍 " .. selectedArea
 AreaDropdown.Font = Enum.Font.GothamBold
-AreaDropdown.TextSize = 12
-AreaDropdown.ZIndex = 3
-AreaDropdown.Parent = AreaFrame
+AreaDropdown.TextSize = 11
+AreaDropdown.ZIndex = 11
+AreaDropdown.Parent = AdminPopup
 
-local AreaDropdownCorner = Instance.new("UICorner")
-AreaDropdownCorner.CornerRadius = UDim.new(0, 5)
-AreaDropdownCorner.Parent = AreaDropdown
+local AreaCorner = Instance.new("UICorner")
+AreaCorner.CornerRadius = UDim.new(0, 5)
+AreaCorner.Parent = AreaDropdown
 
 AreaDropdown.MouseButton1Click:Connect(function()
-    local currentIndex = table.find(Areas, selectedArea) or 1
-    currentIndex = currentIndex + 1
-    if currentIndex > #Areas then
-        currentIndex = 1
-    end
-    selectedArea = Areas[currentIndex]
-    AreaDropdown.Text = selectedArea
+    local idx = table.find(Areas, selectedArea) or 1
+    idx = idx + 1
+    if idx > #Areas then idx = 1 end
+    selectedArea = Areas[idx]
+    AreaDropdown.Text = "📍 " .. selectedArea
 end)
-
--- ==================== MUTATION SELECTION ====================
-local MutationFrame = Instance.new("Frame")
-MutationFrame.Size = UDim2.new(1, 0, 0, 50)
-MutationFrame.Position = UDim2.new(0, 0, 0, 260)
-MutationFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
-MutationFrame.ZIndex = 2
-MutationFrame.Parent = ContentContainer
-
-local MutationCorner = Instance.new("UICorner")
-MutationCorner.CornerRadius = UDim.new(0, 10)
-MutationCorner.Parent = MutationFrame
-
-local MutationLabel = Instance.new("TextLabel")
-MutationLabel.Size = UDim2.new(0.4, 0, 1, 0)
-MutationLabel.Position = UDim2.new(0.05, 0, 0, 0)
-MutationLabel.BackgroundTransparency = 1
-MutationLabel.Text = "🧬 Mutation:"
-MutationLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-MutationLabel.TextSize = 14
-MutationLabel.Font = Enum.Font.GothamBold
-MutationLabel.TextXAlignment = Enum.TextXAlignment.Left
-MutationLabel.ZIndex = 3
-MutationLabel.Parent = MutationFrame
 
 local MutationDropdown = Instance.new("TextButton")
-MutationDropdown.Size = UDim2.new(0.5, 0, 0, 30)
-MutationDropdown.Position = UDim2.new(0.45, 0, 0, 10)
+MutationDropdown.Size = UDim2.new(0.45, 0, 0, 30)
+MutationDropdown.Position = UDim2.new(0.52, 0, 0, 80)
 MutationDropdown.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
 MutationDropdown.TextColor3 = Color3.fromRGB(255, 255, 255)
-MutationDropdown.Text = selectedMutation
+MutationDropdown.Text = "🧬 " .. selectedMutation
 MutationDropdown.Font = Enum.Font.GothamBold
-MutationDropdown.TextSize = 12
-MutationDropdown.ZIndex = 3
-MutationDropdown.Parent = MutationFrame
+MutationDropdown.TextSize = 11
+MutationDropdown.ZIndex = 11
+MutationDropdown.Parent = AdminPopup
 
-local MutationDropdownCorner = Instance.new("UICorner")
-MutationDropdownCorner.CornerRadius = UDim.new(0, 5)
-MutationDropdownCorner.Parent = MutationDropdown
-
-MutationDropdown.MouseButton1Click:Connect(function()
-    local currentIndex = table.find(Mutations, selectedMutation) or 1
-    currentIndex = currentIndex + 1
-    if currentIndex > #Mutations then
-        currentIndex = 1
-    end
-    selectedMutation = Mutations[currentIndex]
-    MutationDropdown.Text = selectedMutation
-end)
-
--- ==================== AUTO BUY ====================
-local autoBuyBtn = createButton("🛒 Auto Buy: [OFF]", UDim2.new(0, 0, 0, 320), UDim2.new(1, 0, 0, 50))
-
-autoBuyBtn.MouseButton1Click:Connect(function()
-    autoBuyOn = not autoBuyOn
-    autoBuyBtn.Text = "🛒 Auto Buy: [" .. (autoBuyOn and "ON" or "OFF") .. "]"
-    autoBuyBtn.BackgroundColor3 = autoBuyOn and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 100, 0)
-end)
-
--- ==================== AUTO BUY ITEMS SELECTION ====================
-local AutoBuySelectLabel = Instance.new("TextLabel")
-AutoBuySelectLabel.Size = UDim2.new(1, 0, 0, 25)
-AutoBuySelectLabel.Position = UDim2.new(0, 0, 0, 380)
-AutoBuySelectLabel.BackgroundTransparency = 1
-AutoBuySelectLabel.Text = "🛒 SELECT AUTO BUY ITEMS (Click to toggle):"
-AutoBuySelectLabel.TextColor3 = Color3.fromRGB(255, 200, 0)
-AutoBuySelectLabel.TextSize = 13
-AutoBuySelectLabel.Font = Enum.Font.GothamBold
-AutoBuySelectLabel.ZIndex = 2
-AutoBuySelectLabel.Parent = ContentContainer
-
-local autoBuyItemButtons = {}
-local yPosAB = 410
-
-for _, item in ipairs(AutoBuyItems) do
-    selectedAutoBuyItems[item] = true -- Default all selected
-    
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.48, 0, 0, 35)
-    btn.Position = UDim2.new(0, 0, 0, yPosAB)
-    btn.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-    btn.TextColor3 = Color3.fromRGB(0, 0, 0)
-    btn.Text = "✅ " .. item
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 10
-    btn.ZIndex = 2
-    btn.Parent = ContentContainer
-    
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 5)
-    btnCorner.Parent = btn
-    
-    btn.MouseButton1Click:Connect(function()
-        selectedAutoBuyItems[item] = not selectedAutoBuyItems[item]
-        if selectedAutoBuyItems[item] then
-            btn.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-            btn.Text = "✅ " .. item
-        else
-            btn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
-            btn.Text = "❌ " .. item
-            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        end
-    end)
-    
-    table.insert(autoBuyItemButtons, btn)
-    yPosAB = yPosAB + 40
-end
-
--- ==================== AUTO BUY SPEED ====================
-local autoBuySpeedBtn = createButton("⚡ Auto Buy Speed: [OFF]", UDim2.new(0, 0, 0, yPosAB + 10), UDim2.new(1, 0, 0, 50))
-
-autoBuySpeedBtn.MouseButton1Click:Connect(function()
-    autoBuySpeedOn = not autoBuySpeedOn
-    autoBuySpeedBtn.Text = "⚡ Auto Buy Speed: [" .. (autoBuySpeedOn and "ON" or "OFF") .. "]"
-    autoBuySpeedBtn.BackgroundColor3 = autoBuySpeedOn and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 100, 0)
-end)
-
--- ==================== ADMIN SPAWN ====================
-local AdminSpawnLabel = Instance.new("TextLabel")
-AdminSpawnLabel.Size = UDim2.new(1, 0, 0, 30)
-AdminSpawnLabel.Position = UDim2.new(0, 0, 0, yPosAB + 70)
-AdminSpawnLabel.BackgroundTransparency = 1
-AdminSpawnLabel.Text = "👑 ADMIN SPAWN (Area: " .. selectedArea .. " | Mutation: " .. selectedMutation .. ")"
-AdminSpawnLabel.TextColor3 = Color3.fromRGB(255, 200, 0)
-AdminSpawnLabel.TextSize = 12
-AdminSpawnLabel.Font = Enum.Font.GothamBlack
-AdminSpawnLabel.ZIndex = 2
-AdminSpawnLabel.Parent = ContentContainer
-
--- Update label when area or mutation changes
-AreaDropdown.MouseButton1Click:Connect(function()
-    AdminSpawnLabel.Text = "👑 ADMIN SPAWN (Area: " .. selectedArea .. " | Mutation: " .. selectedMutation .. ")"
-end)
+local MutationCorner = Instance.new("UICorner")
+MutationCorner.CornerRadius = UDim.new(0, 5)
+MutationCorner.Parent = MutationDropdown
 
 MutationDropdown.MouseButton1Click:Connect(function()
-    AdminSpawnLabel.Text = "👑 ADMIN SPAWN (Area: " .. selectedArea .. " | Mutation: " .. selectedMutation .. ")"
+    local idx = table.find(Mutations, selectedMutation) or 1
+    idx = idx + 1
+    if idx > #Mutations then idx = 1 end
+    selectedMutation = Mutations[idx]
+    MutationDropdown.Text = "🧬 " .. selectedMutation
 end)
 
--- Create Admin Spawn buttons
-local yPosAdmin = yPosAB + 105
-
+-- Create Admin Spawn buttons in popup
 for _, category in ipairs(AdminCategories) do
+    local catLabel = Instance.new("TextLabel")
+    catLabel.Size = UDim2.new(1, 0, 0, 25)
+    catLabel.BackgroundColor3 = Color3.fromRGB(255, 100, 0)
+    catLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    catLabel.Text = "  " .. category.Name:upper()
+    catLabel.Font = Enum.Font.GothamBlack
+    catLabel.TextSize = 13
+    catLabel.TextXAlignment = Enum.TextXAlignment.Left
+    catLabel.ZIndex = 11
+    catLabel.Parent = AdminScroll
+    
+    local catCorner = Instance.new("UICorner")
+    catCorner.CornerRadius = UDim.new(0, 5)
+    catCorner.Parent = catLabel
+    
     for _, item in ipairs(category.Items) do
         local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(0.48, 0, 0, 35)
-        btn.Position = UDim2.new(0, 0, 0, yPosAdmin)
+        btn.Size = UDim2.new(1, 0, 0, 30)
         btn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
         btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btn.Text = category.Name .. ": " .. item
+        btn.Text = item
         btn.Font = Enum.Font.Gotham
-        btn.TextSize = 10
-        btn.ZIndex = 2
-        btn.Parent = ContentContainer
+        btn.TextSize = 12
+        btn.ZIndex = 11
+        btn.Parent = AdminScroll
         
         local btnCorner = Instance.new("UICorner")
         btnCorner.CornerRadius = UDim.new(0, 5)
@@ -590,13 +606,8 @@ for _, category in ipairs(AdminCategories) do
                 }))
             end)
         end)
-        
-        yPosAdmin = yPosAdmin + 40
     end
 end
-
--- Update CanvasSize
-ContentContainer.CanvasSize = UDim2.new(0, 0, 0, yPosAdmin + 50)
 
 -- ==================== MAIN LOOPS ====================
 -- Fly loop
@@ -720,10 +731,9 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 print("🚂 Xdragon Hub - Don't Crash By Train loaded!")
+print("💎 Delta UI Style activated!")
 print("💰 Money Giver: Ready")
 print("🦅 Fly: Ready")
-print("📍 Area Selection: Ready (Any rarity can go to any area)")
-print("🧬 Mutation Selection: Ready")
-print("🛒 Auto Buy with Item Selection: Ready")
-print("👑 Admin Spawn: Ready")
+print("🛒 Auto Buy with Item Selection Popup: Ready")
+print("👑 Admin Spawn with Popup: Ready")
 print("⚡ Auto Buy Speed: Ready")
