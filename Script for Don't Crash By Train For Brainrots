@@ -731,7 +731,7 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 print("🚂 Xdragon Hub - Don't Crash By Train loaded!")
-print("💎 Delta UI Style activated!")
+print("🗝️ XDRG Admin Panel: Ready")
 print("💰 Money Giver: Ready")
 print("🦅 Fly: Ready")
 print("🛒 Auto Buy with Item Selection Popup: Ready")
