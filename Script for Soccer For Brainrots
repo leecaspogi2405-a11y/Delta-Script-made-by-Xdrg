@@ -1,0 +1,577 @@
+-- +1 Football for Brainrots | Xdragon Hub Edition
+-- Anti-duplicate system
+if game:GetService("CoreGui"):FindFirstChild("XDragonHub") then
+    game:GetService("CoreGui"):FindFirstChild("XDragonHub"):Destroy()
+end
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local Knit = ReplicatedStorage.Packages._Index:WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit")
+local RF = Knit.Services.Game.RF
+local Signals = require(ReplicatedStorage.Source.PlaywooEngine.Utils.Signals)
+
+local function getBase()
+    local num = LocalPlayer:GetAttribute("baseNumber")
+    return workspace.Map.PlayerBases[num].PlayArea
+end
+
+local function getCharacter()
+    local char = LocalPlayer.Character
+    if not char then
+        char = LocalPlayer.CharacterAdded:Wait()
+    end
+    return char:WaitForChild("HumanoidRootPart"), char:WaitForChild("Humanoid")
+end
+
+local function getBasePosition()
+    local area = getBase()
+    local base = area:FindFirstChild("Base")
+    if base then
+        if base:IsA("BasePart") then
+            return base.Position
+        end
+        local part = base:FindFirstChildWhichIsA("BasePart", true)
+        if part then
+            return part.Position
+        end
+    end
+    return area.TowerBase.KickZoneText.Position
+end
+
+local SUFFIX = {
+    K = 1e3,
+    M = 1e6,
+    B = 1e9,
+    T = 1e12,
+}
+
+local function parseEarnings(text)
+    if not text then return 0 end
+    local num, suffix = string.match(text, "%$([%d%.]+)([KMBT])/s")
+    if not num then return 0 end
+    return (tonumber(num) or 0) * (SUFFIX[suffix] or 1)
+end
+
+local RARITY_RANK = {
+    Common = 1,
+    Uncommon = 2,
+    Rare = 3,
+    Epic = 4,
+    Legendary = 5,
+    Mythical = 6,
+    Cosmic = 7,
+    Secret = 8,
+    Celestial = 9,
+    Divine = 10,
+}
+
+local function scoreModel(model)
+    local tag = model:FindFirstChild("BillboardGuiNameTag", true)
+    if not tag then return nil end
+    local rarityLabel = tag:FindFirstChild("TextLabelRarity")
+    local earnLabel = tag:FindFirstChild("TextLabelEarning")
+    local levelLabel = tag:FindFirstChild("TextLabelLevel")
+    local rank = (rarityLabel and RARITY_RANK[rarityLabel.Text]) or 0
+    local earn = parseEarnings(earnLabel and earnLabel.Text)
+    local level = tonumber(levelLabel and string.match(levelLabel.Text, "Lv%.(%d+)")) or 0
+    return rank * 1e18 + earn * 1e3 + level
+end
+
+local function selfHeal()
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if hum and hum.WalkSpeed == 0 and LocalPlayer:GetAttribute("isInKickSession") ~= true then
+        hum.WalkSpeed = 16
+        hum.JumpPower = 50
+    end
+end
+
+local ballLanded = false
+Signals.Connect("LocalKickLanded", function()
+    ballLanded = true
+end)
+
+function Kick()
+    if _G.KickRunning then return end
+    task.spawn(function()
+        _G.KickRunning = true
+        local failedClaims = 0
+        local submitTime = 0
+        local startAttempts = 0
+        local returnCooldown = 0
+        while _G.Kick do
+            task.wait()
+            xpcall(function()
+                if os.clock() < returnCooldown then return end
+                local inSession = LocalPlayer:GetAttribute("isInKickSession") == true
+                local inThrowZone = LocalPlayer:GetAttribute("isInThrowZone") == true
+                if inSession and not ballLanded then
+                    if submitTime == 0 then submitTime = os.clock() end
+                    if os.clock() - submitTime > 30 then
+                        RF.ReturnFromKick:InvokeServer()
+                        submitTime, failedClaims, ballLanded = 0, 0, false
+                        returnCooldown = os.clock() + 2
+                    end
+                elseif inSession and ballLanded then
+                    local rewards = {}
+                    for _, model in ipairs(workspace.Brainrots:GetDescendants()) do
+                        if model:IsA("Model") and model:GetAttribute("kickRewardId") then
+                            local score = scoreModel(model)
+                            if score then
+                                table.insert(rewards, { model = model, score = score })
+                            end
+                        end
+                    end
+                    if #rewards > 0 then
+                        table.sort(rewards, function(a, b) return a.score > b.score end)
+                        local entry = rewards[1]
+                        getCharacter().CFrame = entry.model:GetPivot()
+                        task.wait(0.2)
+                        local ok = RF.ClaimKickReward:InvokeServer(entry.model:GetAttribute("kickRewardId"))
+                        if ok then
+                            failedClaims = 0
+                        else
+                            failedClaims += 1
+                        end
+                        task.wait(0.3)
+                    else
+                        failedClaims += 1
+                    end
+                    if failedClaims >= 4 then
+                        RF.ReturnFromKick:InvokeServer()
+                        submitTime, failedClaims, ballLanded = 0, 0, false
+                        startAttempts = 0
+                        returnCooldown = os.clock() + 2
+                    end
+                elseif not inThrowZone then
+                    startAttempts = 0
+                    selfHeal()
+                    local root = getCharacter()
+                    root.CFrame = CFrame.new(getBasePosition() + Vector3.new(0, 5, 0))
+                    task.wait(0.6)
+                    root.CFrame = CFrame.new(getBase().TowerBase.KickZoneText.Position)
+                    local t0 = os.clock()
+                    while _G.Kick and os.clock() - t0 < 3 do
+                        if LocalPlayer:GetAttribute("isInThrowZone") == true then break end
+                        task.wait(0.1)
+                    end
+                else
+                    selfHeal()
+                    Signals.Fire("CancelKickMinigame")
+                    task.wait(0.3)
+                    ballLanded = false
+                    Signals.Fire("StartKickMinigame")
+                    task.wait(0.5)
+                    Signals.Fire("ConfirmKickAlpha", 1)
+                    submitTime = os.clock()
+                    startAttempts += 1
+                    local t0 = os.clock()
+                    while _G.Kick and os.clock() - t0 < 5 do
+                        if LocalPlayer:GetAttribute("isInKickSession") == true then
+                            startAttempts = 0
+                            break
+                        end
+                        task.wait(0.2)
+                    end
+                    if startAttempts > 1 then
+                        task.wait(math.min(startAttempts, 3))
+                    end
+                end
+            end, function(err)
+                warn("[Kick] " .. tostring(err))
+            end)
+        end
+        _G.KickRunning = false
+    end)
+end
+
+function Train()
+    task.spawn(function()
+        _G.Train = true
+        while _G.Train do
+            task.wait()
+            pcall(function()
+                LocalPlayer:WaitForChild("Backpack")
+                local backpack = LocalPlayer.Backpack
+                local _, humanoid = getCharacter()
+                for _, tool in ipairs(backpack:GetChildren()) do
+                    if tool:IsA("Tool") and tool:GetAttribute("weightKey") ~= nil then
+                        humanoid:EquipTool(tool)
+                    end
+                end
+                for _ = 1, 6 do
+                    RF.ClaimX2PowerCircle:InvokeServer(1)
+                end
+                task.wait(1.5)
+            end)
+        end
+    end)
+end
+
+function Cash()
+    task.spawn(function()
+        _G.Cash = true
+        while _G.Cash do
+            task.wait()
+            pcall(function()
+                local slots = getBase().Base.BrainrotSlots
+                for _, slot in ipairs(slots:GetChildren()) do
+                    if slot:GetAttribute("hasBrainrot") == true then
+                        RF.ClaimEarnings:InvokeServer(slot.Name)
+                        task.wait(0.2)
+                    end
+                end
+                task.wait(2)
+            end)
+        end
+    end)
+end
+
+function Upgrade()
+    task.spawn(function()
+        _G.Upgrade = true
+        while _G.Upgrade do
+            task.wait()
+            pcall(function()
+                local slots = getBase().Base.BrainrotSlots
+                for _, slot in ipairs(slots:GetChildren()) do
+                    if slot:GetAttribute("hasBrainrot") == true then
+                        RF.UpgradeBrainrot:InvokeServer(slot.Name)
+                        task.wait(0.2)
+                    end
+                end
+                task.wait(2)
+            end)
+        end
+    end)
+end
+
+function Floor()
+    task.spawn(function()
+        _G.Floor = true
+        while _G.Floor do
+            task.wait()
+            pcall(function()
+                if not LocalPlayer:GetAttribute("isInKickSession") or not LocalPlayer:GetAttribute("isInThrowZone") then
+                    local tower = getBase().UpgradeTower
+                    local root = getCharacter()
+                    root.CFrame = tower:GetPivot()
+                    task.wait(0.2)
+                    for _, desc in ipairs(tower:GetDescendants()) do
+                        if desc:IsA("ProximityPrompt") then
+                            fireproximityprompt(desc, 1, true)
+                        end
+                    end
+                end
+                task.wait(1)
+            end)
+        end
+    end)
+end
+
+function Rebirth()
+    task.spawn(function()
+        _G.Rebirth = true
+        while _G.Rebirth do
+            task.wait()
+            pcall(function()
+                local alert = LocalPlayer.PlayerGui.MainGui.HUDRight.Menu.Menu.Rebirth.ImageButton.CustomAlertIcon
+                if alert.Visible == true then
+                    RF.Rebirth:InvokeServer()
+                end
+                task.wait(0.2)
+            end)
+        end
+    end)
+end
+
+-- ==================== XDRAGON HUB UI ====================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "XDragonHub"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+local success, _ = pcall(function()
+    if gethui then
+        ScreenGui.Parent = gethui()
+    else
+        ScreenGui.Parent = game:GetService("CoreGui")
+    end
+end)
+if not success then
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 400, 0, 500)
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+
+local FrameCorner = Instance.new("UICorner")
+FrameCorner.CornerRadius = UDim.new(0, 16)
+FrameCorner.Parent = MainFrame
+
+local BorderFrame = Instance.new("Frame")
+BorderFrame.Size = UDim2.new(1, 4, 1, 4)
+BorderFrame.Position = UDim2.new(0, -2, 0, -2)
+BorderFrame.BackgroundColor3 = Color3.fromRGB(108, 92, 231)
+BorderFrame.BorderSizePixel = 0
+BorderFrame.ZIndex = 0
+BorderFrame.Parent = MainFrame
+
+local BorderGradient = Instance.new("UIGradient")
+BorderGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(108, 92, 231)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 206, 201)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(253, 121, 168))
+})
+BorderGradient.Rotation = 45
+BorderGradient.Parent = BorderFrame
+
+local BorderCorner = Instance.new("UICorner")
+BorderCorner.CornerRadius = UDim.new(0, 16)
+BorderCorner.Parent = BorderFrame
+
+local InnerFrame = Instance.new("Frame")
+InnerFrame.Size = UDim2.new(1, -4, 1, -4)
+InnerFrame.Position = UDim2.new(0, 2, 0, 2)
+InnerFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+InnerFrame.BorderSizePixel = 0
+InnerFrame.ZIndex = 1
+InnerFrame.Parent = MainFrame
+
+local InnerCorner = Instance.new("UICorner")
+InnerCorner.CornerRadius = UDim.new(0, 14)
+InnerCorner.Parent = InnerFrame
+
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1, 0, 0, 60)
+Header.BackgroundColor3 = Color3.fromRGB(108, 92, 231)
+Header.BorderSizePixel = 0
+Header.ZIndex = 2
+Header.Parent = InnerFrame
+
+local HeaderGradient = Instance.new("UIGradient")
+HeaderGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(108, 92, 231)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 206, 201))
+})
+HeaderGradient.Rotation = 90
+HeaderGradient.Parent = Header
+
+local HeaderCorner = Instance.new("UICorner")
+HeaderCorner.CornerRadius = UDim.new(0, 14)
+HeaderCorner.Parent = Header
+
+local TitleText = Instance.new("TextLabel")
+TitleText.Size = UDim2.new(0.7, 0, 1, 0)
+TitleText.Position = UDim2.new(0.05, 0, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "⚽ XDRAGON HUB"
+TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleText.TextSize = 20
+TitleText.Font = Enum.Font.GothamBlack
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.ZIndex = 3
+TitleText.Parent = Header
+
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+MinimizeBtn.Position = UDim2.new(1, -40, 0.5, -15)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.Text = "—"
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.TextSize = 20
+MinimizeBtn.ZIndex = 3
+MinimizeBtn.Parent = Header
+
+local MinimizeCorner = Instance.new("UICorner")
+MinimizeCorner.CornerRadius = UDim.new(0, 8)
+MinimizeCorner.Parent = MinimizeBtn
+
+local ContentContainer = Instance.new("ScrollingFrame")
+ContentContainer.Size = UDim2.new(1, -20, 1, -70)
+ContentContainer.Position = UDim2.new(0, 10, 0, 65)
+ContentContainer.BackgroundTransparency = 1
+ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 450)
+ContentContainer.ScrollBarThickness = 4
+ContentContainer.ScrollBarImageColor3 = Color3.fromRGB(108, 92, 231)
+ContentContainer.ZIndex = 2
+ContentContainer.Parent = InnerFrame
+
+local function createToggle(text, pos, callback)
+    local toggleFrame = Instance.new("Frame")
+    toggleFrame.Size = UDim2.new(1, 0, 0, 50)
+    toggleFrame.Position = pos
+    toggleFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+    toggleFrame.ZIndex = 2
+    toggleFrame.Parent = ContentContainer
+    
+    local toggleCorner = Instance.new("UICorner")
+    toggleCorner.CornerRadius = UDim.new(0, 10)
+    toggleCorner.Parent = toggleFrame
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.7, 0, 1, 0)
+    label.Position = UDim2.new(0.05, 0, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextSize = 14
+    label.Font = Enum.Font.GothamBold
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.ZIndex = 3
+    label.Parent = toggleFrame
+    
+    local toggleBtn = Instance.new("TextButton")
+    toggleBtn.Size = UDim2.new(0, 60, 0, 30)
+    toggleBtn.Position = UDim2.new(1, -70, 0.5, -15)
+    toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+    toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleBtn.Text = "OFF"
+    toggleBtn.Font = Enum.Font.GothamBold
+    toggleBtn.TextSize = 14
+    toggleBtn.ZIndex = 3
+    toggleBtn.Parent = toggleFrame
+    
+    local toggleBtnCorner = Instance.new("UICorner")
+    toggleBtnCorner.CornerRadius = UDim.new(0, 15)
+    toggleBtnCorner.Parent = toggleBtn
+    
+    local isOn = false
+    
+    toggleBtn.MouseButton1Click:Connect(function()
+        isOn = not isOn
+        toggleBtn.Text = isOn and "ON" or "OFF"
+        toggleBtn.BackgroundColor3 = isOn and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(50, 50, 55)
+        callback(isOn)
+    end)
+end
+
+createToggle("⚽ Best Kick & Claim", UDim2.new(0, 0, 0, 0), function(state)
+    _G.Kick = state
+    if state then
+        Kick()
+    else
+        task.spawn(function()
+            if LocalPlayer:GetAttribute("isInKickSession") ~= true then
+                Signals.Fire("CancelKickMinigame")
+            end
+            task.wait(0.2)
+            selfHeal()
+        end)
+    end
+end)
+
+createToggle("🚂 x2 Train", UDim2.new(0, 0, 0, 60), function(state)
+    _G.Train = state
+    if state then Train() end
+end)
+
+createToggle("💰 Collect Cash", UDim2.new(0, 0, 0, 120), function(state)
+    _G.Cash = state
+    if state then Cash() end
+end)
+
+createToggle("⬆️ Upgrade Brainrot", UDim2.new(0, 0, 0, 180), function(state)
+    _G.Upgrade = state
+    if state then Upgrade() end
+end)
+
+createToggle("🏗️ Upgrade Floor", UDim2.new(0, 0, 0, 240), function(state)
+    _G.Floor = state
+    if state then Floor() end
+end)
+
+createToggle("🔄 Auto Rebirth", UDim2.new(0, 0, 0, 300), function(state)
+    _G.Rebirth = state
+    if state then Rebirth() end
+end)
+
+local CreditLabel = Instance.new("TextLabel")
+CreditLabel.Size = UDim2.new(1, 0, 0, 40)
+CreditLabel.Position = UDim2.new(0, 0, 0, 370)
+CreditLabel.BackgroundTransparency = 1
+CreditLabel.Text = "Created by: Dev Xdragon"
+CreditLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+CreditLabel.TextSize = 14
+CreditLabel.Font = Enum.Font.GothamBold
+CreditLabel.ZIndex = 2
+CreditLabel.Parent = ContentContainer
+
+-- ==================== MINIMIZE LOGIC ====================
+local isMinimized = false
+
+local CircleLogo = Instance.new("ImageButton")
+CircleLogo.Size = UDim2.new(0, 60, 0, 60)
+CircleLogo.Position = UDim2.new(0.5, -30, 0.5, -30)
+CircleLogo.BackgroundColor3 = Color3.fromRGB(108, 92, 231)
+CircleLogo.Image = "rbxassetid://1511976415632031754"
+CircleLogo.Visible = false
+CircleLogo.ZIndex = 5
+CircleLogo.Parent = ScreenGui
+
+local CircleCorner = Instance.new("UICorner")
+CircleCorner.CornerRadius = UDim.new(1, 0)
+CircleCorner.Parent = CircleLogo
+
+MinimizeBtn.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    MainFrame.Visible = not isMinimized
+    CircleLogo.Visible = isMinimized
+end)
+
+CircleLogo.MouseButton1Click:Connect(function()
+    isMinimized = false
+    MainFrame.Visible = true
+    CircleLogo.Visible = false
+end)
+
+-- ==================== DRAG FUNCTIONALITY ====================
+local dragging = false
+local dragInput = nil
+local dragStart = nil
+local startPos = nil
+
+local function updateDrag(input)
+    local delta = input.Position - dragStart
+    MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+MainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        updateDrag(input)
+    end
+end)
+
+print("⚽ Xdragon Hub - Football for Brainrots loaded!")
+print("💎 Delta UI Style activated!")
