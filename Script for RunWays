@@ -124,7 +124,7 @@ local function npcMatchesTarget(classification)
     return true
 end
 
--- ==================== LOOPS ====================
+-- ==================== ALL LOOPS (COMPLETE LOGIC) ====================
 -- Kill Aura
 task.spawn(function()
     while true do
@@ -253,7 +253,7 @@ task.spawn(function()
     end
 end)
 
--- Auto break doors
+-- Auto break doors & barricades
 task.spawn(function()
     while true do
         if State.BreakDoors then
@@ -319,7 +319,7 @@ task.spawn(function()
     end
 end)
 
--- Auto repair
+-- Auto repair main vehicle
 task.spawn(function()
     while true do
         if State.AutoRepair then
@@ -329,7 +329,8 @@ task.spawn(function()
                 if vehicle and root then
                     local hp = vehicle:FindFirstChild("vehicleHealth")
                     local vRoot = vehicle.PrimaryPart or vehicle:FindFirstChildWhichIsA("BasePart")
-                    if hp and hp:IsA("NumberValue") and hp.Value < 100 and vRoot and (vRoot.Position - root.Position).Magnitude <= 30 then
+                    if hp and hp:IsA("NumberValue") and hp.Value < 100 and vRoot
+                        and (vRoot.Position - root.Position).Magnitude <= 30 then
                         local tool = findTool(REPAIR_KEYWORDS)
                         if tool then
                             equipTool(tool)
@@ -344,7 +345,7 @@ task.spawn(function()
     end
 end)
 
--- Auto refuel
+-- Auto refuel main vehicle
 task.spawn(function()
     while true do
         if State.AutoRefuel then
@@ -490,7 +491,7 @@ local function getTeleportSpots()
     return spots
 end
 
--- ==================== XDRAGON HUB UI ====================
+-- ==================== XDRAGON HUB UI (DELTA STYLE) ====================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "XDragonHub"
 ScreenGui.ResetOnSpawn = false
@@ -508,7 +509,6 @@ if not success then
 end
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 420, 0, 580)
 MainFrame.Position = UDim2.new(0.5, -210, 0.5, -290)
 MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 18)
@@ -600,7 +600,6 @@ local MinimizeCorner = Instance.new("UICorner")
 MinimizeCorner.CornerRadius = UDim.new(0, 8)
 MinimizeCorner.Parent = MinimizeBtn
 
--- Tab system
 local TabFrame = Instance.new("Frame")
 TabFrame.Size = UDim2.new(1, 0, 0, 40)
 TabFrame.Position = UDim2.new(0, 0, 0, 60)
@@ -645,7 +644,7 @@ local ContentContainer = Instance.new("ScrollingFrame")
 ContentContainer.Size = UDim2.new(1, -20, 1, -110)
 ContentContainer.Position = UDim2.new(0, 10, 0, 105)
 ContentContainer.BackgroundTransparency = 1
-ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 600)
+ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 700)
 ContentContainer.ScrollBarThickness = 4
 ContentContainer.ScrollBarImageColor3 = Color3.fromRGB(255, 0, 100)
 ContentContainer.ZIndex = 2
@@ -829,17 +828,27 @@ end
 
 local function updateContent()
     clearContent()
+    ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 700)
     
     if currentTab == "Main" then
         createSlider("Walk Speed", 16, 500, State.WalkSpeed, UDim2.new(0, 0, 0, 0), function(v) State.WalkSpeed = v end)
-        createToggle("No Clip", UDim2.new(0, 0, 0, 65), function(v) State.NoClip = v end)
+        createToggle("No Clip", UDim2.new(0, 0, 0, 65), function(v)
+            State.NoClip = v
+            if not v and LocalPlayer.Character then
+                for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = true
+                    end
+                end
+            end
+        end)
         createToggle("Infinite Jump", UDim2.new(0, 0, 0, 115), function(v) State.InfiniteJump = v end)
         createToggle("Infinite Ammo", UDim2.new(0, 0, 0, 165), function(v) State.InfiniteAmmo = v end)
     elseif currentTab == "Combat" then
         createToggle("NPC Kill Aura", UDim2.new(0, 0, 0, 0), function(v) State.KillAura = v end)
         createDropdown("Target", {"All NPCs", "Civilians Only", "Hostile Only", "Officers Only", "Hostile & Officers"}, UDim2.new(0, 0, 0, 55), function(v) State.KillAuraTarget = v end)
-        createSlider("Damage", 10, 100000, State.KillAuraDamage, UDim2.new(0, 0, 0, 110), function(v) State.KillAuraDamage = v end)
-        createSlider("Range", 5, 500, State.KillAuraRange, UDim2.new(0, 0, 0, 175), function(v) State.KillAuraRange = v end)
+        createSlider("Kill Aura Damage", 10, 100000, State.KillAuraDamage, UDim2.new(0, 0, 0, 110), function(v) State.KillAuraDamage = v end)
+        createSlider("Kill Aura Range", 5, 500, State.KillAuraRange, UDim2.new(0, 0, 0, 175), function(v) State.KillAuraRange = v end)
         createButton("Insta Kill All Police", UDim2.new(0, 0, 0, 240), function()
             for _, npc in ipairs(CollectionService:GetTagged("NPC")) do
                 if classifyNPC(npc) == "Officer" then
@@ -847,20 +856,24 @@ local function updateContent()
                     if hum and hum.Health > 0 then
                         pcall(function() Flow.NPCs.Damage(hum, math.huge) end)
                     end
-                end            end
+                end
+            end
         end)
     elseif currentTab == "Farm" then
         createToggle("Auto Loot Aura", UDim2.new(0, 0, 0, 0), function(v) State.LootAura = v end)
-        createSlider("Min Loot Price", 0, 5000, State.LootMinPrice, UDim2.new(0, 0, 0, 55), function(v) State.LootMinPrice = v end)
-        createSlider("Loot Range", 10, 500, State.LootRange, UDim2.new(0, 0, 0, 120), function(v) State.LootRange = v end)
-        createToggle("Auto Collect Cash", UDim2.new(0, 0, 0, 185), function(v) State.AutoCash = v end)
-        createSlider("Cash Range", 10, 1000, State.CashRange, UDim2.new(0, 0, 0, 240), function(v) State.CashRange = v end)
+        createSlider("Minimum Loot Price", 0, 5000, State.LootMinPrice, UDim2.new(0, 0, 0, 55), function(v) State.LootMinPrice = v end)
+        createSlider("Loot Aura Range", 10, 500, State.LootRange, UDim2.new(0, 0, 0, 120), function(v) State.LootRange = v end)
+        createToggle("Auto Collect Cash Drops", UDim2.new(0, 0, 0, 185), function(v) State.AutoCash = v end)
+        createSlider("Cash Collect Range", 10, 1000, State.CashRange, UDim2.new(0, 0, 0, 240), function(v) State.CashRange = v end)
         createToggle("Auto Break Doors", UDim2.new(0, 0, 0, 305), function(v) State.BreakDoors = v end)
-        createToggle("Auto Shatter Glass", UDim2.new(0, 0, 0, 355), function(v) State.ShatterGlass = v end)
-        createToggle("Auto Heal", UDim2.new(0, 0, 0, 405), function(v) State.AutoHeal = v end)
-        createSlider("Heal Below HP%", 10, 99, State.HealAt, UDim2.new(0, 0, 0, 460), function(v) State.HealAt = v end)
-        createToggle("Auto Repair Vehicle", UDim2.new(0, 0, 0, 525), function(v) State.AutoRepair = v end)
-        createToggle("Auto Refuel Vehicle", UDim2.new(0, 0, 0, 575), function(v) State.AutoRefuel = v end)
+        createSlider("Break Range", 5, 100, State.BreakRange, UDim2.new(0, 0, 0, 355), function(v) State.BreakRange = v end)
+        createToggle("Auto Shatter Glass", UDim2.new(0, 0, 0, 420), function(v) State.ShatterGlass = v end)
+        createSlider("Glass Range", 10, 300, State.GlassRange, UDim2.new(0, 0, 0, 470), function(v) State.GlassRange = v end)
+        createToggle("Auto Heal", UDim2.new(0, 0, 0, 535), function(v) State.AutoHeal = v end)
+        createSlider("Heal Below HP%", 10, 99, State.HealAt, UDim2.new(0, 0, 0, 585), function(v) State.HealAt = v end)
+        createToggle("Auto Repair Vehicle", UDim2.new(0, 0, 0, 650), function(v) State.AutoRepair = v end)
+        createToggle("Auto Refuel Vehicle", UDim2.new(0, 0, 0, 700), function(v) State.AutoRefuel = v end)
+        ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 800)
     elseif currentTab == "Teleport" then
         local spotNames = {}
         for name in pairs(getTeleportSpots()) do
@@ -878,8 +891,8 @@ local function updateContent()
             end
         end)
     elseif currentTab == "ESP" then
-        createToggle("Loot ESP", UDim2.new(0, 0, 0, 0), function(v) State.LootESP = v end)
-        createToggle("NPC ESP", UDim2.new(0, 0, 0, 55), function(v) State.NPCESP = v end)
+        createToggle("Loot ESP (Name & Price)", UDim2.new(0, 0, 0, 0), function(v) State.LootESP = v end)
+        createToggle("NPC / Police ESP", UDim2.new(0, 0, 0, 55), function(v) State.NPCESP = v end)
         createToggle("Vehicle ESP", UDim2.new(0, 0, 0, 110), function(v) State.VehicleESP = v end)
         createToggle("Cash Drop ESP", UDim2.new(0, 0, 0, 165), function(v) State.CashESP = v end)
     end
@@ -952,4 +965,4 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 print("🏃 Xdragon Hub - Runaways loaded!")
-print("💎 Custom Delta UI activated!")
+print("💎 All logic preserved + Custom Delta UI!")
