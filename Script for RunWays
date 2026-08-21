@@ -1,0 +1,955 @@
+-- ==================== XDRAGON HUB - RUNAWAYS ====================
+-- Anti-duplicate system
+if game:GetService("CoreGui"):FindFirstChild("XDragonHub") then
+    game:GetService("CoreGui"):FindFirstChild("XDragonHub"):Destroy()
+end
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CollectionService = game:GetService("CollectionService")
+local LocalPlayer = Players.LocalPlayer
+local Backpack = LocalPlayer:WaitForChild("Backpack")
+
+local Flow = require(ReplicatedStorage.FlowClient)
+local LootData = require(ReplicatedStorage.Data.Loot)
+
+-- ==================== STATE ====================
+local State = {
+    KillAura = false,
+    KillAuraTarget = "All NPCs",
+    KillAuraDamage = 100000,
+    KillAuraRange = 30,
+    WalkSpeed = 16,
+    NoClip = false,
+    InfiniteJump = false,
+    InfiniteAmmo = false,
+    LootAura = false,
+    LootMinPrice = 0,
+    LootRange = 50,
+    AutoCash = false,
+    CashRange = 100,
+    BreakDoors = false,
+    BreakRange = 25,
+    ShatterGlass = false,
+    GlassRange = 50,
+    AutoHeal = false,
+    HealAt = 50,
+    AutoRepair = false,
+    AutoRefuel = false,
+    LootESP = false,
+    NPCESP = false,
+    VehicleESP = false,
+    CashESP = false,
+}
+
+-- ==================== HELPERS ====================
+local function getRoot()
+    local char = LocalPlayer.Character
+    return char and char:FindFirstChild("HumanoidRootPart")
+end
+
+local function getHumanoid()
+    local char = LocalPlayer.Character
+    return char and char:FindFirstChildOfClass("Humanoid")
+end
+
+local HEAL_KEYWORDS = {"bandage", "medkit", "med kit", "first aid", "health", "painkiller", "adrenaline", "syringe", "food", "snack", "drink", "water", "soda"}
+local REPAIR_KEYWORDS = {"repair", "wrench", "toolbox", "tool box", "fix"}
+local FUEL_KEYWORDS = {"jerrycan", "jerry can", "gas can", "gascan", "fuel can", "gasoline"}
+
+local function toolMatches(tool, keywords)
+    local name = string.lower(tool.Name)
+    for _, kw in ipairs(keywords) do
+        if string.find(name, kw, 1, true) then
+            return true
+        end
+    end
+    return false
+end
+
+local function findTool(keywords)
+    local char = LocalPlayer.Character
+    if char then
+        for _, t in ipairs(char:GetChildren()) do
+            if t:IsA("Tool") and toolMatches(t, keywords) then
+                return t
+            end
+        end
+    end
+    for _, t in ipairs(Backpack:GetChildren()) do
+        if t:IsA("Tool") and toolMatches(t, keywords) then
+            return t
+        end
+    end
+    return nil
+end
+
+local function equipTool(tool)
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if hum and tool and tool.Parent ~= char then
+        hum:EquipTool(tool)
+    end
+end
+
+local function getMainVehicle()
+    local tagged = CollectionService:GetTagged("MainVehicle")
+    if #tagged > 0 then return tagged[1] end
+    return workspace.Vehicles:FindFirstChildWhichIsA("Model")
+end
+
+local function classifyNPC(model)
+    local name = string.lower(model.Name)
+    if name:find("officer") or name:find("police") or name:find("cop") or name:find("swat") or name:find("sheriff") then
+        return "Officer"
+    end
+    if model:FindFirstChildOfClass("Tool") then
+        return "Hostile"
+    end
+    local holster = model:FindFirstChild("Holster")
+    if holster and #holster:GetChildren() > 0 then
+        return "Hostile"
+    end
+    return "Civilian"
+end
+
+local function npcMatchesTarget(classification)
+    if State.KillAuraTarget == "All NPCs" then return true end
+    if State.KillAuraTarget == "Officers Only" then return classification == "Officer" end
+    if State.KillAuraTarget == "Hostile Only" then return classification == "Hostile" end
+    if State.KillAuraTarget == "Civilians Only" then return classification == "Civilian" end
+    if State.KillAuraTarget == "Hostile & Officers" then return classification ~= "Civilian" end
+    return true
+end
+
+-- ==================== LOOPS ====================
+-- Kill Aura
+task.spawn(function()
+    while true do
+        if State.KillAura then
+            pcall(function()
+                local root = getRoot()
+                if root then
+                    for _, npc in ipairs(CollectionService:GetTagged("NPC")) do
+                        local hum = npc:FindFirstChildOfClass("Humanoid")
+                        if hum and hum.Health > 0 and npc.Parent then
+                            local npcRoot = npc:FindFirstChild("HumanoidRootPart") or npc.PrimaryPart
+                            if npcRoot and (npcRoot.Position - root.Position).Magnitude <= State.KillAuraRange then
+                                if npcMatchesTarget(classifyNPC(npc)) then
+                                    Flow.NPCs.Damage(hum, State.KillAuraDamage)
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+        task.wait(0.2)
+    end
+end)
+
+-- Walk speed
+RunService.Heartbeat:Connect(function()
+    local hum = getHumanoid()
+    if hum and State.WalkSpeed > 16 and hum.WalkSpeed ~= State.WalkSpeed then
+        hum.WalkSpeed = State.WalkSpeed
+    end
+end)
+
+-- NoClip
+RunService.Stepped:Connect(function()
+    if State.NoClip and LocalPlayer.Character then
+        for _, part in ipairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+-- Infinite jump
+UserInputService.JumpRequest:Connect(function()
+    if State.InfiniteJump then
+        local hum = getHumanoid()
+        if hum then
+            hum:ChangeState(Enum.HumanoidStateType.Jumping)
+        end
+    end
+end)
+
+-- Infinite ammo
+task.spawn(function()
+    while true do
+        if State.InfiniteAmmo then
+            pcall(function()
+                local char = LocalPlayer.Character
+                local containers = {Backpack}
+                if char then table.insert(containers, char) end
+                for _, container in ipairs(containers) do
+                    for _, tool in ipairs(container:GetChildren()) do
+                        if tool:IsA("Tool") then
+                            local max = tool:GetAttribute("MaxAmmo")
+                            if max and tool:GetAttribute("Ammo") ~= max then
+                                tool:SetAttribute("Ammo", max)
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+        task.wait(0.5)
+    end
+end)
+
+-- Loot aura
+task.spawn(function()
+    while true do
+        if State.LootAura then
+            pcall(function()
+                local root = getRoot()
+                local loot = workspace:FindFirstChild("Loot")
+                if root and loot then
+                    for _, d in ipairs(loot:GetDescendants()) do
+                        if d:IsA("MeshPart") and d.Parent then
+                            if (d.Position - root.Position).Magnitude <= State.LootRange then
+                                local price = 0
+                                pcall(function()
+                                    price = LootData.GetItemPrice(d.Parent.Name) or 0
+                                end)
+                                if price >= State.LootMinPrice then
+                                    Flow.Loot.LootEquip(d)
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+        task.wait(0.5)
+    end
+end)
+
+-- Auto collect cash
+task.spawn(function()
+    while true do
+        if State.AutoCash then
+            pcall(function()
+                local root = getRoot()
+                if root then
+                    for _, cash in ipairs(CollectionService:GetTagged("Cash")) do
+                        if cash.Parent then
+                            local pos = cash:IsA("BasePart") and cash.Position or cash:GetPivot().Position
+                            if (pos - root.Position).Magnitude <= State.CashRange then
+                                Flow.Cash.Collect(cash)
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+        task.wait(0.5)
+    end
+end)
+
+-- Auto break doors
+task.spawn(function()
+    while true do
+        if State.BreakDoors then
+            pcall(function()
+                local root = getRoot()
+                if root then
+                    for _, d in ipairs(workspace.Map:GetDescendants()) do
+                        if d:IsA("BasePart") and d.Transparency < 1 then
+                            local n = d.Name
+                            if n == "Barricade" or n:find("Door") then
+                                if (d.Position - root.Position).Magnitude <= State.BreakRange then
+                                    Flow.DamageToOpen.Damage(d, 1000, "melee")
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+        task.wait(1)
+    end
+end)
+
+-- Auto shatter glass
+task.spawn(function()
+    while true do
+        if State.ShatterGlass then
+            pcall(function()
+                local root = getRoot()
+                if root then
+                    for _, glass in ipairs(CollectionService:GetTagged("Glass")) do
+                        if glass.Parent and glass.Transparency < 1 then
+                            if (glass.Position - root.Position).Magnitude <= State.GlassRange then
+                                glass.CanCollide = false
+                                Flow.Effects.BreakGlass(glass)
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+        task.wait(1)
+    end
+end)
+
+-- Auto heal
+task.spawn(function()
+    while true do
+        if State.AutoHeal then
+            pcall(function()
+                local hum = getHumanoid()
+                if hum and hum.Health > 0 and hum.Health < hum.MaxHealth * State.HealAt / 100 then
+                    local item = findTool(HEAL_KEYWORDS)
+                    if item then
+                        equipTool(item)
+                        task.wait(0.2)
+                        Flow.Consumables.Consume(item)
+                    end
+                end
+            end)
+        end
+        task.wait(1)
+    end
+end)
+
+-- Auto repair
+task.spawn(function()
+    while true do
+        if State.AutoRepair then
+            pcall(function()
+                local vehicle = getMainVehicle()
+                local root = getRoot()
+                if vehicle and root then
+                    local hp = vehicle:FindFirstChild("vehicleHealth")
+                    local vRoot = vehicle.PrimaryPart or vehicle:FindFirstChildWhichIsA("BasePart")
+                    if hp and hp:IsA("NumberValue") and hp.Value < 100 and vRoot and (vRoot.Position - root.Position).Magnitude <= 30 then
+                        local tool = findTool(REPAIR_KEYWORDS)
+                        if tool then
+                            equipTool(tool)
+                            task.wait(0.2)
+                            Flow.Repair.RepairVehicle(tool)
+                        end
+                    end
+                end
+            end)
+        end
+        task.wait(1)
+    end
+end)
+
+-- Auto refuel
+task.spawn(function()
+    while true do
+        if State.AutoRefuel then
+            pcall(function()
+                local vehicle = getMainVehicle()
+                local root = getRoot()
+                if vehicle and root then
+                    local vRoot = vehicle.PrimaryPart or vehicle:FindFirstChildWhichIsA("BasePart")
+                    if vRoot and (vRoot.Position - root.Position).Magnitude <= 20 then
+                        local can = findTool(FUEL_KEYWORDS)
+                        if can then
+                            equipTool(can)
+                            task.wait(0.2)
+                            Flow.Jerrycan.Pour(can, true)
+                            task.wait(1)
+                            Flow.Jerrycan.Pour(can, false)
+                        end
+                    end
+                end
+            end)
+        end
+        task.wait(2)
+    end
+end)
+
+-- ESP system
+local ESPObjects = {}
+local function clearESP(key)
+    for obj, owner in pairs(ESPObjects) do
+        if owner == key then
+            if obj.Parent then obj:Destroy() end
+            ESPObjects[obj] = nil
+        end
+    end
+end
+
+local function addHighlight(addee, color, key, labelText)
+    local holder = addee:IsA("Model") and (addee.PrimaryPart or addee:FindFirstChildWhichIsA("BasePart")) or addee
+    if not holder then return end
+    local highlight = Instance.new("Highlight")
+    highlight.FillColor = color
+    highlight.OutlineColor = Color3.new(1, 1, 1)
+    highlight.FillTransparency = 0.6
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Adornee = addee
+    highlight.Parent = holder
+    ESPObjects[highlight] = key
+    if labelText then
+        local bb = Instance.new("BillboardGui")
+        bb.Size = UDim2.fromOffset(200, 40)
+        bb.StudsOffset = Vector3.new(0, 3, 0)
+        bb.AlwaysOnTop = true
+        bb.Adornee = holder
+        bb.Parent = holder
+        local tl = Instance.new("TextLabel")
+        tl.Size = UDim2.fromScale(1, 1)
+        tl.BackgroundTransparency = 1
+        tl.TextColor3 = color
+        tl.TextStrokeTransparency = 0.2
+        tl.TextScaled = true
+        tl.Font = Enum.Font.GothamBold
+        tl.Text = labelText
+        tl.Parent = bb
+        ESPObjects[bb] = key
+        ESPObjects[tl] = key
+    end
+end
+
+task.spawn(function()
+    while true do
+        pcall(function()
+            if State.LootESP then
+                clearESP("Loot")
+                local loot = workspace:FindFirstChild("Loot")
+                if loot then
+                    for _, d in ipairs(loot:GetDescendants()) do
+                        if d:IsA("MeshPart") and d.Parent then
+                            local price = 0
+                            pcall(function()
+                                price = LootData.GetItemPrice(d.Parent.Name) or 0
+                            end)
+                            addHighlight(d, Color3.fromRGB(255, 215, 0), "Loot", d.Parent.Name .. " $" .. price)
+                        end
+                    end
+                end
+            else
+                clearESP("Loot")
+            end
+            if State.NPCESP then
+                clearESP("NPC")
+                for _, npc in ipairs(CollectionService:GetTagged("NPC")) do
+                    local class = classifyNPC(npc)
+                    local color = class == "Officer" and Color3.fromRGB(0, 120, 255)
+                        or class == "Hostile" and Color3.fromRGB(255, 60, 60)
+                        or Color3.fromRGB(60, 255, 60)
+                    addHighlight(npc, color, "NPC", npc.Name .. " [" .. class .. "]")
+                end
+            else
+                clearESP("NPC")
+            end
+            if State.VehicleESP then
+                clearESP("Vehicle")
+                for _, v in ipairs(workspace.Vehicles:GetChildren()) do
+                    addHighlight(v, Color3.fromRGB(170, 90, 255), "Vehicle", v.Name)
+                end
+            else
+                clearESP("Vehicle")
+            end
+            if State.CashESP then
+                clearESP("Cash")
+                for _, c in ipairs(CollectionService:GetTagged("Cash")) do
+                    addHighlight(c, Color3.fromRGB(60, 255, 60), "Cash", "Cash Drop")
+                end
+            else
+                clearESP("Cash")
+            end
+        end)
+        task.wait(1)
+    end
+end)
+
+-- ==================== TELEPORT ====================
+local function getTeleportSpots()
+    local spots = {}
+    if workspace.SpawnLocation then
+        spots["Spawn"] = CFrame.new(workspace.SpawnLocation.Position + Vector3.new(0, 5, 0))
+    end
+    local seen = {}
+    for i, b in ipairs(workspace.Map.Buildings:GetChildren()) do
+        if b:IsA("Model") then
+            local label = seen[b.Name] and (b.Name .. " " .. i) or b.Name
+            seen[b.Name] = true
+            spots[label] = b:GetPivot() + Vector3.new(0, 10, 0)
+        end
+    end
+    local veh = getMainVehicle()
+    if veh then
+        local vp = veh.PrimaryPart or veh:FindFirstChildWhichIsA("BasePart")
+        if vp then
+            spots["My Vehicle"] = CFrame.new(vp.Position + Vector3.new(0, 8, 0))
+        end
+    end
+    return spots
+end
+
+-- ==================== XDRAGON HUB UI ====================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "XDragonHub"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+local success, _ = pcall(function()
+    if gethui then
+        ScreenGui.Parent = gethui()
+    else
+        ScreenGui.Parent = game:GetService("CoreGui")
+    end
+end)
+if not success then
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 420, 0, 580)
+MainFrame.Position = UDim2.new(0.5, -210, 0.5, -290)
+MainFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 18)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+
+local FrameCorner = Instance.new("UICorner")
+FrameCorner.CornerRadius = UDim.new(0, 16)
+FrameCorner.Parent = MainFrame
+
+local BorderFrame = Instance.new("Frame")
+BorderFrame.Size = UDim2.new(1, 4, 1, 4)
+BorderFrame.Position = UDim2.new(0, -2, 0, -2)
+BorderFrame.BackgroundColor3 = Color3.fromRGB(255, 0, 100)
+BorderFrame.BorderSizePixel = 0
+BorderFrame.ZIndex = 0
+BorderFrame.Parent = MainFrame
+
+local BorderGradient = Instance.new("UIGradient")
+BorderGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 100)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 100, 0)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 100))
+})
+BorderGradient.Rotation = 45
+BorderGradient.Parent = BorderFrame
+
+local BorderCorner = Instance.new("UICorner")
+BorderCorner.CornerRadius = UDim.new(0, 16)
+BorderCorner.Parent = BorderFrame
+
+local InnerFrame = Instance.new("Frame")
+InnerFrame.Size = UDim2.new(1, -4, 1, -4)
+InnerFrame.Position = UDim2.new(0, 2, 0, 2)
+InnerFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+InnerFrame.BorderSizePixel = 0
+InnerFrame.ZIndex = 1
+InnerFrame.Parent = MainFrame
+
+local InnerCorner = Instance.new("UICorner")
+InnerCorner.CornerRadius = UDim.new(0, 14)
+InnerCorner.Parent = InnerFrame
+
+local Header = Instance.new("Frame")
+Header.Size = UDim2.new(1, 0, 0, 60)
+Header.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+Header.BorderSizePixel = 0
+Header.ZIndex = 2
+Header.Parent = InnerFrame
+
+local HeaderGradient = Instance.new("UIGradient")
+HeaderGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 100)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 100, 0))
+})
+HeaderGradient.Rotation = 90
+HeaderGradient.Parent = Header
+
+local HeaderCorner = Instance.new("UICorner")
+HeaderCorner.CornerRadius = UDim.new(0, 14)
+HeaderCorner.Parent = Header
+
+local TitleText = Instance.new("TextLabel")
+TitleText.Size = UDim2.new(0.7, 0, 1, 0)
+TitleText.Position = UDim2.new(0.05, 0, 0, 0)
+TitleText.BackgroundTransparency = 1
+TitleText.Text = "🏃 RUNAWAYS HUB"
+TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleText.TextSize = 18
+TitleText.Font = Enum.Font.GothamBlack
+TitleText.TextXAlignment = Enum.TextXAlignment.Left
+TitleText.ZIndex = 3
+TitleText.Parent = Header
+
+local MinimizeBtn = Instance.new("TextButton")
+MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+MinimizeBtn.Position = UDim2.new(1, -40, 0.5, -15)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+MinimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeBtn.Text = "—"
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.TextSize = 20
+MinimizeBtn.ZIndex = 3
+MinimizeBtn.Parent = Header
+
+local MinimizeCorner = Instance.new("UICorner")
+MinimizeCorner.CornerRadius = UDim.new(0, 8)
+MinimizeCorner.Parent = MinimizeBtn
+
+-- Tab system
+local TabFrame = Instance.new("Frame")
+TabFrame.Size = UDim2.new(1, 0, 0, 40)
+TabFrame.Position = UDim2.new(0, 0, 0, 60)
+TabFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+TabFrame.BorderSizePixel = 0
+TabFrame.ZIndex = 2
+TabFrame.Parent = InnerFrame
+
+local Tabs = {"Main", "Combat", "Farm", "Teleport", "ESP"}
+local TabButtons = {}
+local currentTab = "Main"
+
+for i, tabName in ipairs(Tabs) do
+    local tabBtn = Instance.new("TextButton")
+    tabBtn.Size = UDim2.new(1 / #Tabs, -4, 0, 35)
+    tabBtn.Position = UDim2.new((i - 1) / #Tabs, 2, 0, 2)
+    tabBtn.BackgroundColor3 = i == 1 and Color3.fromRGB(255, 0, 100) or Color3.fromRGB(30, 30, 40)
+    tabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    tabBtn.Text = tabName
+    tabBtn.Font = Enum.Font.GothamBold
+    tabBtn.TextSize = 12
+    tabBtn.ZIndex = 3
+    tabBtn.Parent = TabFrame
+    
+    local tabCorner = Instance.new("UICorner")
+    tabCorner.CornerRadius = UDim.new(0, 6)
+    tabCorner.Parent = tabBtn
+    
+    tabBtn.MouseButton1Click:Connect(function()
+        currentTab = tabName
+        for _, btn in ipairs(TabButtons) do
+            btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+        end
+        tabBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 100)
+        updateContent()
+    end)
+    
+    table.insert(TabButtons, tabBtn)
+end
+
+local ContentContainer = Instance.new("ScrollingFrame")
+ContentContainer.Size = UDim2.new(1, -20, 1, -110)
+ContentContainer.Position = UDim2.new(0, 10, 0, 105)
+ContentContainer.BackgroundTransparency = 1
+ContentContainer.CanvasSize = UDim2.new(0, 0, 0, 600)
+ContentContainer.ScrollBarThickness = 4
+ContentContainer.ScrollBarImageColor3 = Color3.fromRGB(255, 0, 100)
+ContentContainer.ZIndex = 2
+ContentContainer.Parent = InnerFrame
+
+local function clearContent()
+    for _, child in pairs(ContentContainer:GetChildren()) do
+        if child:IsA("Frame") or child:IsA("TextButton") or child:IsA("TextBox") or child:IsA("TextLabel") then
+            child:Destroy()
+        end
+    end
+end
+
+local function createToggle(text, pos, callback)
+    local toggleFrame = Instance.new("Frame")
+    toggleFrame.Size = UDim2.new(1, 0, 0, 45)
+    toggleFrame.Position = pos
+    toggleFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    toggleFrame.ZIndex = 2
+    toggleFrame.Parent = ContentContainer
+    
+    local toggleCorner = Instance.new("UICorner")
+    toggleCorner.CornerRadius = UDim.new(0, 8)
+    toggleCorner.Parent = toggleFrame
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.7, 0, 1, 0)
+    label.Position = UDim2.new(0.05, 0, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextSize = 12
+    label.Font = Enum.Font.GothamBold
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextWrapped = true
+    label.ZIndex = 3
+    label.Parent = toggleFrame
+    
+    local toggleBtn = Instance.new("TextButton")
+    toggleBtn.Size = UDim2.new(0, 50, 0, 25)
+    toggleBtn.Position = UDim2.new(1, -60, 0.5, -12)
+    toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+    toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleBtn.Text = "OFF"
+    toggleBtn.Font = Enum.Font.GothamBold
+    toggleBtn.TextSize = 11
+    toggleBtn.ZIndex = 3
+    toggleBtn.Parent = toggleFrame
+    
+    local toggleBtnCorner = Instance.new("UICorner")
+    toggleBtnCorner.CornerRadius = UDim.new(0, 12)
+    toggleBtnCorner.Parent = toggleBtn
+    
+    local isOn = false
+    
+    toggleBtn.MouseButton1Click:Connect(function()
+        isOn = not isOn
+        toggleBtn.Text = isOn and "ON" or "OFF"
+        toggleBtn.BackgroundColor3 = isOn and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(50, 50, 60)
+        callback(isOn)
+    end)
+end
+
+local function createSlider(text, min, max, default, pos, callback)
+    local sliderFrame = Instance.new("Frame")
+    sliderFrame.Size = UDim2.new(1, 0, 0, 55)
+    sliderFrame.Position = pos
+    sliderFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    sliderFrame.ZIndex = 2
+    sliderFrame.Parent = ContentContainer
+    
+    local sliderCorner = Instance.new("UICorner")
+    sliderCorner.CornerRadius = UDim.new(0, 8)
+    sliderCorner.Parent = sliderFrame
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 0, 20)
+    label.Position = UDim2.new(0.05, 0, 0, 3)
+    label.BackgroundTransparency = 1
+    label.Text = text .. ": " .. default
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextSize = 12
+    label.Font = Enum.Font.GothamBold
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.ZIndex = 3
+    label.Parent = sliderFrame
+    
+    local inputBox = Instance.new("TextBox")
+    inputBox.Size = UDim2.new(0.3, 0, 0, 20)
+    inputBox.Position = UDim2.new(0.65, 0, 0, 30)
+    inputBox.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+    inputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+    inputBox.Text = tostring(default)
+    inputBox.Font = Enum.Font.Gotham
+    inputBox.TextSize = 11
+    inputBox.ZIndex = 3
+    inputBox.Parent = sliderFrame
+    
+    local inputCorner = Instance.new("UICorner")
+    inputCorner.CornerRadius = UDim.new(0, 5)
+    inputCorner.Parent = inputBox
+    
+    inputBox.FocusLost:Connect(function()
+        local val = tonumber(inputBox.Text)
+        if val and val >= min and val <= max then
+            label.Text = text .. ": " .. val
+            callback(val)
+        else
+            inputBox.Text = tostring(default)
+        end
+    end)
+end
+
+local function createButton(text, pos, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 40)
+    btn.Position = pos
+    btn.BackgroundColor3 = Color3.fromRGB(255, 0, 100)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Text = text
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 13
+    btn.ZIndex = 2
+    btn.Parent = ContentContainer
+    
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 8)
+    btnCorner.Parent = btn
+    
+    btn.MouseButton1Click:Connect(callback)
+end
+
+local function createDropdown(text, options, pos, callback)
+    local dropdownFrame = Instance.new("Frame")
+    dropdownFrame.Size = UDim2.new(1, 0, 0, 45)
+    dropdownFrame.Position = pos
+    dropdownFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+    dropdownFrame.ZIndex = 2
+    dropdownFrame.Parent = ContentContainer
+    
+    local dropdownCorner = Instance.new("UICorner")
+    dropdownCorner.CornerRadius = UDim.new(0, 8)
+    dropdownCorner.Parent = dropdownFrame
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.4, 0, 1, 0)
+    label.Position = UDim2.new(0.05, 0, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextSize = 12
+    label.Font = Enum.Font.GothamBold
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.ZIndex = 3
+    label.Parent = dropdownFrame
+    
+    local dropdownBtn = Instance.new("TextButton")
+    dropdownBtn.Size = UDim2.new(0.5, 0, 0, 30)
+    dropdownBtn.Position = UDim2.new(0.45, 0, 0.5, -15)
+    dropdownBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+    dropdownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    dropdownBtn.Text = options[1]
+    dropdownBtn.Font = Enum.Font.GothamBold
+    dropdownBtn.TextSize = 11
+    dropdownBtn.ZIndex = 3
+    dropdownBtn.Parent = dropdownFrame
+    
+    local dropdownBtnCorner = Instance.new("UICorner")
+    dropdownBtnCorner.CornerRadius = UDim.new(0, 5)
+    dropdownBtnCorner.Parent = dropdownBtn
+    
+    local currentIndex = 1
+    
+    dropdownBtn.MouseButton1Click:Connect(function()
+        currentIndex = currentIndex + 1
+        if currentIndex > #options then currentIndex = 1 end
+        dropdownBtn.Text = options[currentIndex]
+        callback(options[currentIndex])
+    end)
+end
+
+local function updateContent()
+    clearContent()
+    
+    if currentTab == "Main" then
+        createSlider("Walk Speed", 16, 500, State.WalkSpeed, UDim2.new(0, 0, 0, 0), function(v) State.WalkSpeed = v end)
+        createToggle("No Clip", UDim2.new(0, 0, 0, 65), function(v) State.NoClip = v end)
+        createToggle("Infinite Jump", UDim2.new(0, 0, 0, 115), function(v) State.InfiniteJump = v end)
+        createToggle("Infinite Ammo", UDim2.new(0, 0, 0, 165), function(v) State.InfiniteAmmo = v end)
+    elseif currentTab == "Combat" then
+        createToggle("NPC Kill Aura", UDim2.new(0, 0, 0, 0), function(v) State.KillAura = v end)
+        createDropdown("Target", {"All NPCs", "Civilians Only", "Hostile Only", "Officers Only", "Hostile & Officers"}, UDim2.new(0, 0, 0, 55), function(v) State.KillAuraTarget = v end)
+        createSlider("Damage", 10, 100000, State.KillAuraDamage, UDim2.new(0, 0, 0, 110), function(v) State.KillAuraDamage = v end)
+        createSlider("Range", 5, 500, State.KillAuraRange, UDim2.new(0, 0, 0, 175), function(v) State.KillAuraRange = v end)
+        createButton("Insta Kill All Police", UDim2.new(0, 0, 0, 240), function()
+            for _, npc in ipairs(CollectionService:GetTagged("NPC")) do
+                if classifyNPC(npc) == "Officer" then
+                    local hum = npc:FindFirstChildOfClass("Humanoid")
+                    if hum and hum.Health > 0 then
+                        pcall(function() Flow.NPCs.Damage(hum, math.huge) end)
+                    end
+                end            end
+        end)
+    elseif currentTab == "Farm" then
+        createToggle("Auto Loot Aura", UDim2.new(0, 0, 0, 0), function(v) State.LootAura = v end)
+        createSlider("Min Loot Price", 0, 5000, State.LootMinPrice, UDim2.new(0, 0, 0, 55), function(v) State.LootMinPrice = v end)
+        createSlider("Loot Range", 10, 500, State.LootRange, UDim2.new(0, 0, 0, 120), function(v) State.LootRange = v end)
+        createToggle("Auto Collect Cash", UDim2.new(0, 0, 0, 185), function(v) State.AutoCash = v end)
+        createSlider("Cash Range", 10, 1000, State.CashRange, UDim2.new(0, 0, 0, 240), function(v) State.CashRange = v end)
+        createToggle("Auto Break Doors", UDim2.new(0, 0, 0, 305), function(v) State.BreakDoors = v end)
+        createToggle("Auto Shatter Glass", UDim2.new(0, 0, 0, 355), function(v) State.ShatterGlass = v end)
+        createToggle("Auto Heal", UDim2.new(0, 0, 0, 405), function(v) State.AutoHeal = v end)
+        createSlider("Heal Below HP%", 10, 99, State.HealAt, UDim2.new(0, 0, 0, 460), function(v) State.HealAt = v end)
+        createToggle("Auto Repair Vehicle", UDim2.new(0, 0, 0, 525), function(v) State.AutoRepair = v end)
+        createToggle("Auto Refuel Vehicle", UDim2.new(0, 0, 0, 575), function(v) State.AutoRefuel = v end)
+    elseif currentTab == "Teleport" then
+        local spotNames = {}
+        for name in pairs(getTeleportSpots()) do
+            table.insert(spotNames, name)
+        end
+        table.sort(spotNames)
+        local teleportTo = nil
+        createDropdown("Location", spotNames, UDim2.new(0, 0, 0, 0), function(v) teleportTo = v end)
+        createButton("Teleport", UDim2.new(0, 0, 0, 55), function()
+            if not teleportTo then return end
+            local cf = getTeleportSpots()[teleportTo]
+            local root = getRoot()
+            if cf and root then
+                root.CFrame = cf
+            end
+        end)
+    elseif currentTab == "ESP" then
+        createToggle("Loot ESP", UDim2.new(0, 0, 0, 0), function(v) State.LootESP = v end)
+        createToggle("NPC ESP", UDim2.new(0, 0, 0, 55), function(v) State.NPCESP = v end)
+        createToggle("Vehicle ESP", UDim2.new(0, 0, 0, 110), function(v) State.VehicleESP = v end)
+        createToggle("Cash Drop ESP", UDim2.new(0, 0, 0, 165), function(v) State.CashESP = v end)
+    end
+end
+
+updateContent()
+
+-- ==================== MINIMIZE LOGIC ====================
+local isMinimized = false
+
+local CircleLogo = Instance.new("ImageButton")
+CircleLogo.Size = UDim2.new(0, 60, 0, 60)
+CircleLogo.Position = UDim2.new(0.5, -30, 0.5, -30)
+CircleLogo.BackgroundColor3 = Color3.fromRGB(255, 0, 100)
+CircleLogo.Image = "rbxassetid://1511976415632031754"
+CircleLogo.Visible = false
+CircleLogo.ZIndex = 5
+CircleLogo.Parent = ScreenGui
+
+local CircleCorner = Instance.new("UICorner")
+CircleCorner.CornerRadius = UDim.new(1, 0)
+CircleCorner.Parent = CircleLogo
+
+MinimizeBtn.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    MainFrame.Visible = not isMinimized
+    CircleLogo.Visible = isMinimized
+end)
+
+CircleLogo.MouseButton1Click:Connect(function()
+    isMinimized = false
+    MainFrame.Visible = true
+    CircleLogo.Visible = false
+end)
+
+-- ==================== DRAG FUNCTIONALITY ====================
+local dragging = false
+local dragInput = nil
+local dragStart = nil
+local startPos = nil
+
+local function updateDrag(input)
+    local delta = input.Position - dragStart
+    MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+MainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        updateDrag(input)
+    end
+end)
+
+print("🏃 Xdragon Hub - Runaways loaded!")
+print("💎 Custom Delta UI activated!")
