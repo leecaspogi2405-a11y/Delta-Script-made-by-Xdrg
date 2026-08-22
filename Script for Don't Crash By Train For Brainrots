@@ -10,6 +10,16 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
+-- Manual table.find function
+local function tableFind(tbl, value)
+    for i, v in ipairs(tbl) do
+        if v == value then
+            return i
+        end
+    end
+    return nil
+end
+
 -- ==================== GUI SETUP ====================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "XDragonHub"
@@ -390,7 +400,6 @@ CloseAutoBuyPopup.MouseButton1Click:Connect(function()
     AutoBuyPopup.Visible = false
 end)
 
--- Create Auto Buy item buttons in popup
 for _, item in ipairs(AutoBuyItems) do
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 35)
@@ -494,7 +503,6 @@ CloseAdminPopup.MouseButton1Click:Connect(function()
     AdminPopup.Visible = false
 end)
 
--- Controls inside Admin Popup
 local PcsLabel = Instance.new("TextLabel")
 PcsLabel.Size = UDim2.new(0.3, 0, 0, 30)
 PcsLabel.Position = UDim2.new(0.05, 0, 0, 45)
@@ -546,7 +554,7 @@ AreaCorner.CornerRadius = UDim.new(0, 5)
 AreaCorner.Parent = AreaDropdown
 
 AreaDropdown.MouseButton1Click:Connect(function()
-    local idx = table.find(Areas, selectedArea) or 1
+    local idx = tableFind(Areas, selectedArea) or 1
     idx = idx + 1
     if idx > #Areas then idx = 1 end
     selectedArea = Areas[idx]
@@ -569,14 +577,13 @@ MutationCorner.CornerRadius = UDim.new(0, 5)
 MutationCorner.Parent = MutationDropdown
 
 MutationDropdown.MouseButton1Click:Connect(function()
-    local idx = table.find(Mutations, selectedMutation) or 1
+    local idx = tableFind(Mutations, selectedMutation) or 1
     idx = idx + 1
     if idx > #Mutations then idx = 1 end
     selectedMutation = Mutations[idx]
     MutationDropdown.Text = "🧬 " .. selectedMutation
 end)
 
--- Create Admin Spawn buttons in popup
 for _, category in ipairs(AdminCategories) do
     local catLabel = Instance.new("TextLabel")
     catLabel.Size = UDim2.new(1, 0, 0, 25)
@@ -623,7 +630,6 @@ for _, category in ipairs(AdminCategories) do
 end
 
 -- ==================== MAIN LOOPS ====================
--- Fly loop
 RunService.RenderStepped:Connect(function()
     if flyOn and flyBodyVel and flyBodyGyro then
         local char = LocalPlayer.Character
@@ -647,7 +653,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Auto Buy loop (only buys selected items)
 task.spawn(function()
     while true do
         if autoBuyOn then
@@ -667,7 +672,6 @@ task.spawn(function()
     end
 end)
 
--- Auto Buy Speed loop
 task.spawn(function()
     while true do
         if autoBuySpeedOn then
@@ -697,7 +701,6 @@ MinimizeBtn.MouseButton1Click:Connect(function()
     CircleLogo.Visible = isMinimized
 end)
 
--- Circle Logo Drag
 local circleDragging = false
 local circleDragInput = nil
 local circleDragStart = nil
@@ -741,7 +744,7 @@ CircleLogo.MouseButton1Click:Connect(function()
     end
 end)
 
--- ==================== DRAG FUNCTIONALITY ====================
+-- Main Frame Drag
 local dragging = false
 local dragInput = nil
 local dragStart = nil
