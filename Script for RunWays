@@ -81,7 +81,7 @@ local function classifyNPC(model)
     return "Civilian"
 end
 
--- ALL LOOPS
+-- ==================== LOOPS ====================
 task.spawn(function()
     while true do
         if State.KillAura then
@@ -393,7 +393,7 @@ task.spawn(function()
     end
 end)
 
--- TELEPORT
+-- TELEPORT SPOTS
 local function getTeleportSpots()
     local spots = {}
     if workspace.SpawnLocation then spots["Spawn"] = CFrame.new(workspace.SpawnLocation.Position + Vector3.new(0, 5, 0)) end
@@ -436,18 +436,18 @@ local FrameCorner = Instance.new("UICorner")
 FrameCorner.CornerRadius = UDim.new(0, 12)
 FrameCorner.Parent = MainFrame
 
--- Header with Logo
+-- Header
 local Header = Instance.new("Frame")
-Header.Size = UDim2.new(1, 0, 0, 50)
-Header.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+Header.Size = UDim2.new(1, 0, 0, 45)
+Header.BackgroundColor3 = Color3.fromRGB(255, 0, 100)
 Header.BorderSizePixel = 0
 Header.Parent = MainFrame
 
 local LogoImage = Instance.new("ImageLabel")
 LogoImage.Size = UDim2.new(0, 35, 0, 35)
-LogoImage.Position = UDim2.new(0, 10, 0, 7)
+LogoImage.Position = UDim2.new(0, 5, 0, 5)
 LogoImage.BackgroundTransparency = 1
-LogoImage.Image = "rbxassetid://70395348772486"
+LogoImage.Image = "rbxassetid://116012973251361"
 LogoImage.Parent = Header
 
 local LogoCorner = Instance.new("UICorner")
@@ -456,9 +456,9 @@ LogoCorner.Parent = LogoImage
 
 local TitleText = Instance.new("TextLabel")
 TitleText.Size = UDim2.new(0.6, 0, 1, 0)
-TitleText.Position = UDim2.new(0, 55, 0, 0)
+TitleText.Position = UDim2.new(0, 50, 0, 0)
 TitleText.BackgroundTransparency = 1
-TitleText.Text = "RUNAWAYS HUB"
+TitleText.Text = "RUNAWAYS"
 TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleText.TextSize = 16
 TitleText.Font = Enum.Font.GothamBlack
@@ -475,10 +475,10 @@ MinimizeBtn.Font = Enum.Font.GothamBold
 MinimizeBtn.TextSize = 16
 MinimizeBtn.Parent = Header
 
--- Tab Bar
+-- TAB BAR
 local TabBar = Instance.new("Frame")
 TabBar.Size = UDim2.new(1, 0, 0, 35)
-TabBar.Position = UDim2.new(0, 0, 0, 50)
+TabBar.Position = UDim2.new(0, 0, 0, 45)
 TabBar.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 TabBar.BorderSizePixel = 0
 TabBar.Parent = MainFrame
@@ -514,10 +514,10 @@ for i, tabName in ipairs(Tabs) do
     table.insert(TabButtons, tabBtn)
 end
 
--- Content Scroll
+-- Content
 local Scroll = Instance.new("ScrollingFrame")
-Scroll.Size = UDim2.new(1, 0, 1, -85)
-Scroll.Position = UDim2.new(0, 0, 0, 85)
+Scroll.Size = UDim2.new(1, 0, 1, -80)
+Scroll.Position = UDim2.new(0, 0, 0, 80)
 Scroll.BackgroundTransparency = 1
 Scroll.CanvasSize = UDim2.new(0, 0, 0, 500)
 Scroll.ScrollBarThickness = 4
@@ -530,7 +530,7 @@ Layout.Parent = Scroll
 
 local function clearContent()
     for _, child in pairs(Scroll:GetChildren()) do
-        if child:IsA("Frame") then child:Destroy() end
+        if child:IsA("Frame") or child:IsA("TextButton") then child:Destroy() end
     end
 end
 
@@ -698,16 +698,6 @@ function updateContent()
         MakeToggle("NPC Kill Aura", function(v) State.KillAura = v end)
         MakeSlider("Kill Aura Damage", 10, 100000, State.KillAuraDamage, function(v) State.KillAuraDamage = v end)
         MakeSlider("Kill Aura Range", 5, 500, State.KillAuraRange, function(v) State.KillAuraRange = v end)
-        MakeButton("Insta Kill All Police", function()
-            for _, npc in ipairs(CollectionService:GetTagged("NPC")) do
-                if classifyNPC(npc) == "Officer" then
-                    local hum = npc:FindFirstChildOfClass("Humanoid")
-                    if hum and hum.Health > 0 then
-                        pcall(function() Flow.NPCs.Damage(hum, math.huge) end)
-                    end
-                end
-            end
-        end)
     elseif currentTab == "Farm" then
         MakeToggle("Auto Loot Aura", function(v) State.LootAura = v end)
         MakeSlider("Min Loot Price", 0, 5000, State.LootMinPrice, function(v) State.LootMinPrice = v end)
@@ -746,15 +736,16 @@ end
 
 updateContent()
 
--- MINIMIZE with Logo
+-- MINIMIZE with Draggable Logo
 local isMinimized = false
+
 local CircleLogo = Instance.new("ImageButton")
-CircleLogo.Size = UDim2.new(0, 50, 0, 50)
-CircleLogo.Position = UDim2.new(0.5, -25, 0.5, -25)
+CircleLogo.Size = UDim2.new(0, 60, 0, 60)
+CircleLogo.Position = UDim2.new(0.5, -30, 0.5, -30)
 CircleLogo.BackgroundTransparency = 1
-CircleLogo.Image = "rbxassetid://70395348772486"
+CircleLogo.Image = "rbxassetid://116012973251361"
 CircleLogo.Visible = false
-CircleLogo.ZIndex = 5
+CircleLogo.ZIndex = 10
 CircleLogo.Parent = ScreenGui
 
 MinimizeBtn.MouseButton1Click:Connect(function()
@@ -763,13 +754,51 @@ MinimizeBtn.MouseButton1Click:Connect(function()
     CircleLogo.Visible = isMinimized
 end)
 
-CircleLogo.MouseButton1Click:Connect(function()
-    isMinimized = false
-    MainFrame.Visible = true
-    CircleLogo.Visible = false
+-- Circle Logo Drag
+local circleDragging = false
+local circleDragInput = nil
+local circleDragStart = nil
+local circleStartPos = nil
+
+local function updateCircleDrag(input)
+    local delta = input.Position - circleDragStart
+    CircleLogo.Position = UDim2.new(circleStartPos.X.Scale, circleStartPos.X.Offset + delta.X, circleStartPos.Y.Scale, circleStartPos.Y.Offset + delta.Y)
+end
+
+CircleLogo.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        circleDragging = true
+        circleDragStart = input.Position
+        circleStartPos = CircleLogo.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                circleDragging = false
+            end
+        end)
+    end
 end)
 
--- DRAG
+CircleLogo.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        circleDragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == circleDragInput and circleDragging then
+        updateCircleDrag(input)
+    end
+end)
+
+CircleLogo.MouseButton1Click:Connect(function()
+    if not circleDragging then
+        isMinimized = false
+        MainFrame.Visible = true
+        CircleLogo.Visible = false
+    end
+end)
+
+-- Main Frame Drag
 local dragging = false
 local dragInput = nil
 local dragStart = nil
@@ -806,5 +835,6 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 print("🏃 Xdragon Hub - Runaways loaded!")
-print("💎 Tabs: Main, Combat, Farm, Teleport, ESP")
-print("🔵 Logo added!")
+print("💎 Logo: 116012973251361")
+print("🔵 Draggable Circle Logo!")
+print("📑 Tabs: Main, Combat, Farm, Teleport, ESP")
