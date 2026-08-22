@@ -95,13 +95,26 @@ local HeaderCorner = Instance.new("UICorner")
 HeaderCorner.CornerRadius = UDim.new(0, 14)
 HeaderCorner.Parent = Header
 
+-- Logo in Header
+local HeaderLogo = Instance.new("ImageLabel")
+HeaderLogo.Size = UDim2.new(0, 40, 0, 40)
+HeaderLogo.Position = UDim2.new(0, 10, 0, 10)
+HeaderLogo.BackgroundTransparency = 1
+HeaderLogo.Image = "rbxassetid://116012973251361"
+HeaderLogo.ZIndex = 3
+HeaderLogo.Parent = Header
+
+local HeaderLogoCorner = Instance.new("UICorner")
+HeaderLogoCorner.CornerRadius = UDim.new(1, 0)
+HeaderLogoCorner.Parent = HeaderLogo
+
 local TitleText = Instance.new("TextLabel")
-TitleText.Size = UDim2.new(0.7, 0, 1, 0)
-TitleText.Position = UDim2.new(0.05, 0, 0, 0)
+TitleText.Size = UDim2.new(0.6, 0, 1, 0)
+TitleText.Position = UDim2.new(0, 60, 0, 0)
 TitleText.BackgroundTransparency = 1
 TitleText.Text = "🚂 XDRAGON HUB"
 TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleText.TextSize = 20
+TitleText.TextSize = 18
 TitleText.Font = Enum.Font.GothamBlack
 TitleText.TextXAlignment = Enum.TextXAlignment.Left
 TitleText.ZIndex = 3
@@ -666,21 +679,17 @@ task.spawn(function()
     end
 end)
 
--- ==================== MINIMIZE LOGIC ====================
+-- ==================== MINIMIZE WITH DRAGGABLE LOGO ====================
 local isMinimized = false
 
 local CircleLogo = Instance.new("ImageButton")
 CircleLogo.Size = UDim2.new(0, 60, 0, 60)
 CircleLogo.Position = UDim2.new(0.5, -30, 0.5, -30)
-CircleLogo.BackgroundColor3 = Color3.fromRGB(255, 100, 0)
-CircleLogo.Image = "rbxassetid://1511976415632031754"
+CircleLogo.BackgroundTransparency = 1
+CircleLogo.Image = "rbxassetid://116012973251361"
 CircleLogo.Visible = false
-CircleLogo.ZIndex = 5
+CircleLogo.ZIndex = 10
 CircleLogo.Parent = ScreenGui
-
-local CircleCorner = Instance.new("UICorner")
-CircleCorner.CornerRadius = UDim.new(1, 0)
-CircleCorner.Parent = CircleLogo
 
 MinimizeBtn.MouseButton1Click:Connect(function()
     isMinimized = not isMinimized
@@ -688,10 +697,48 @@ MinimizeBtn.MouseButton1Click:Connect(function()
     CircleLogo.Visible = isMinimized
 end)
 
+-- Circle Logo Drag
+local circleDragging = false
+local circleDragInput = nil
+local circleDragStart = nil
+local circleStartPos = nil
+
+local function updateCircleDrag(input)
+    local delta = input.Position - circleDragStart
+    CircleLogo.Position = UDim2.new(circleStartPos.X.Scale, circleStartPos.X.Offset + delta.X, circleStartPos.Y.Scale, circleStartPos.Y.Offset + delta.Y)
+end
+
+CircleLogo.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        circleDragging = true
+        circleDragStart = input.Position
+        circleStartPos = CircleLogo.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                circleDragging = false
+            end
+        end)
+    end
+end)
+
+CircleLogo.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        circleDragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == circleDragInput and circleDragging then
+        updateCircleDrag(input)
+    end
+end)
+
 CircleLogo.MouseButton1Click:Connect(function()
-    isMinimized = false
-    MainFrame.Visible = true
-    CircleLogo.Visible = false
+    if not circleDragging then
+        isMinimized = false
+        MainFrame.Visible = true
+        CircleLogo.Visible = false
+    end
 end)
 
 -- ==================== DRAG FUNCTIONALITY ====================
@@ -731,9 +778,5 @@ UserInputService.InputChanged:Connect(function(input)
 end)
 
 print("🚂 Xdragon Hub - Don't Crash By Train loaded!")
-print("🗝️ XDRG Admin Panel: Ready")
-print("💰 Money Giver: Ready")
-print("🦅 Fly: Ready")
-print("🛒 Auto Buy with Item Selection Popup: Ready")
-print("👑 Admin Spawn with Popup: Ready")
-print("⚡ Auto Buy Speed: Ready")
+print("💎 Logo: 116012973251361")
+print("🔵 Draggable Circle Logo!")
