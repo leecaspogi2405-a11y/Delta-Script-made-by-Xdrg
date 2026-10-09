@@ -1,0 +1,1311 @@
+--[[
+=====================================================================
+   X D R G   H U B   v3.0
+   Game    : Steal An Egg (Roblox)
+   
+   NEW in v3.0:
+   - Egg Selection UI (piliin ang mga egg na gusto mong i-auto steal)
+   - Priority sa Pinakamalayong Area (sinusunod ang biome progression)
+   - Auto Steal Selected Eggs (isang egg o marami)
+   
+   Previous features:
+   - No Knockback / Anti Ragdoll / Anti Fling / Anti Guard Hit
+   - Instant Steal Fly (430 Speed) / Auto Steal
+   - Theme Selection / UI Title Customization
+=====================================================================
+]]
+
+--==================== SERVICES ====================--
+local Players      = game:GetService("Players")
+local UIS          = game:GetService("UserInputService")
+local RunService   = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local LP           = Players.LocalPlayer
+
+--==================== GUI PARENT ====================--
+local Parent
+do
+    if gethui then
+        local ok, res = pcall(gethui)
+        if ok and res then Parent = res end
+    end
+    if not Parent then
+        local ok, res = pcall(function() return game:GetService("CoreGui") end)
+        if ok and res then Parent = res end
+    end
+    Parent = Parent or LP:WaitForChild("PlayerGui")
+end
+
+local old = Parent:FindFirstChild("XdrgHub")
+if old then old:Destroy() end
+
+--==================== BIOME DATA (Priority Order) ====================--
+-- Ang mga biomes ay nakaayos mula pinakamalapit (Forest) hanggang pinakamalayo (Angels & Demons)
+-- Ang priority ng auto steal ay: pinakamalayong area na may selected egg
+
+local BiomeData = {
+    {
+        name = "Forest",
+        speedReq = 0,
+        eggs = {
+            { name = "Chicken Egg", rarity = "Common", income = "$1/s" },
+            { name = "Dog Egg", rarity = "Common", income = "$2/s" },
+            { name = "Bird Egg", rarity = "Uncommon", income = "$8/s" },
+            { name = "Burrowing Owl Egg", rarity = "Rare", income = "$35/s" },
+            { name = "Raccoon Egg", rarity = "Rare", income = "$45/s" },
+            { name = "Fox Egg", rarity = "Epic", income = "$180/s" },
+            { name = "Bear Egg", rarity = "Epic", income = "$240/s" },
+            { name = "Brr Brr Patapim Egg", rarity = "Legendary", income = "$1.8K/s" },
+        },
+    },
+    {
+        name = "Lake",
+        speedReq = 900,
+        eggs = {
+            { name = "Frog Egg", rarity = "Common", income = "$3/s" },
+            { name = "Duckling Egg", rarity = "Common", income = "$4/s" },
+            { name = "Catfish Egg", rarity = "Uncommon", income = "$12/s" },
+            { name = "Turtle Egg", rarity = "Rare", income = "$60/s" },
+            { name = "Trulimero Trulicina Egg", rarity = "Epic", income = "$260/s" },
+            { name = "Swan Egg", rarity = "Epic", income = "$320/s" },
+            { name = "Axolotl Egg", rarity = "Legendary", income = "$2.8K/s" },
+            { name = "Leviathan Egg", rarity = "Cosmic", income = "$220K/s" },
+        },
+    },
+    {
+        name = "Desert",
+        speedReq = 10000,
+        eggs = {
+            { name = "Jerboa Egg", rarity = "Common", income = "$6/s" },
+            { name = "Fennec Egg", rarity = "Uncommon", income = "$18/s" },
+            { name = "Camel Egg", rarity = "Rare", income = "$75/s" },
+            { name = "Tob Tobi Tob Tob Egg", rarity = "Epic", income = "$325/s" },
+            { name = "Snake Egg", rarity = "Legendary", income = "$3.6K/s" },
+            { name = "Sand Spider Egg", rarity = "Mythic", income = "$16K/s" },
+            { name = "Scorpion Egg", rarity = "Mythic", income = "$18.5K/s" },
+            { name = "Royal Sphinx Egg", rarity = "Cosmic", income = "$280K/s" },
+        },
+    },
+    {
+        name = "Jungle",
+        speedReq = 40000,
+        eggs = {
+            { name = "Chimpanzee Egg", rarity = "Rare", income = "$90/s" },
+            { name = "Toucan Egg", rarity = "Rare", income = "$110/s" },
+            { name = "Crocodile Egg", rarity = "Epic", income = "$420/s" },
+            { name = "Gorilla Egg", rarity = "Legendary", income = "$4.8K/s" },
+            { name = "Orangutini Ananassini Egg", rarity = "Legendary", income = "$5.5K/s" },
+            { name = "Spider Egg", rarity = "Mythic", income = "$22K/s" },
+            { name = "Tiger Egg", rarity = "Mythic", income = "$28K/s" },
+            { name = "King Snake Egg", rarity = "Secret", income = "$3.5M/s" },
+        },
+    },
+    {
+        name = "Snow",
+        speedReq = 170000,
+        eggs = {
+            { name = "Penguin Egg", rarity = "Rare", income = "$140/s" },
+            { name = "Walrus Egg", rarity = "Epic", income = "$600/s" },
+            { name = "Polar Bear Egg", rarity = "Legendary", income = "$7K/s" },
+            { name = "Sabertooth Tiger Egg", rarity = "Mythic", income = "$35K/s" },
+            { name = "Mammoth Egg", rarity = "Mythic", income = "$42K/s" },
+            { name = "King Mammoth Egg", rarity = "Cosmic", income = "$400K/s" },
+            { name = "Yeti Egg", rarity = "Secret", income = "$5M/s" },
+            { name = "Ice Dragon Egg", rarity = "Eternal", income = "$65M/s" },
+        },
+    },
+    {
+        name = "Volcano",
+        speedReq = 700000,
+        eggs = {
+            { name = "Lava Gecko Egg", rarity = "Rare", income = "$180/s" },
+            { name = "Lava Frog Egg", rarity = "Epic", income = "$850/s" },
+            { name = "Flaming Bull Egg", rarity = "Legendary", income = "$9.5K/s" },
+            { name = "Lava Iguana Egg", rarity = "Legendary", income = "$11K/s" },
+            { name = "Chillin Chilli Egg", rarity = "Mythic", income = "$55K/s" },
+            { name = "Cerberus Egg", rarity = "Secret", income = "$8M/s" },
+            { name = "Phoenix Egg", rarity = "Eternal", income = "$85M/s" },
+            { name = "Lava Dragon Egg", rarity = "Eternal", income = "$10B/s" },
+        },
+    },
+    {
+        name = "Abyss Ocean",
+        speedReq = 2500000,
+        eggs = {
+            { name = "Parrotfish Egg", rarity = "Rare", income = "$220/s" },
+            { name = "Swordfish Egg", rarity = "Epic", income = "$1.1K/s" },
+            { name = "Shark Egg", rarity = "Legendary", income = "$15K/s" },
+            { name = "Orca Egg", rarity = "Mythic", income = "$80K/s" },
+            { name = "Whale Shark Egg", rarity = "Cosmic", income = "$710K/s" },
+            { name = "Beluga Whale Egg", rarity = "Cosmic", income = "$850K/s" },
+            { name = "Kraken Egg", rarity = "Secret", income = "$15M/s" },
+            { name = "El Maja Egg", rarity = "Eternal", income = "$130M/s" },
+        },
+    },
+    {
+        name = "Prehistoric",
+        speedReq = 18000000,
+        eggs = {
+            { name = "Dodo Egg", rarity = "Rare", income = "$280/s" },
+            { name = "Pterodactyl Egg", rarity = "Legendary", income = "$45K/s" },
+            { name = "Ankylosaurus Egg", rarity = "Mythic", income = "$120K/s" },
+            { name = "Triceratops Egg", rarity = "Cosmic", income = "$1.2M/s" },
+            { name = "Bronto Egg", rarity = "Cosmic", income = "$1.5M/s" },
+            { name = "Tralaledon Egg", rarity = "Secret", income = "$25M/s" },
+            { name = "T-Rex Egg", rarity = "Secret", income = "$40M/s" },
+            { name = "Mosasaurus Egg", rarity = "Secret", income = "$55M/s" },
+        },
+    },
+    {
+        name = "Cherry Blossom",
+        speedReq = 2500000000,
+        eggs = {
+            { name = "Crane Egg", rarity = "Epic", income = "$2.5K/s" },
+            { name = "Salamander Egg", rarity = "Legendary", income = "$85K/s" },
+            { name = "Red Panda Egg", rarity = "Mythic", income = "$220K/s" },
+            { name = "Snowy Owl Egg", rarity = "Mythic", income = "$300K/s" },
+            { name = "Koi Egg", rarity = "Cosmic", income = "$2.8M/s" },
+            { name = "Stag Egg", rarity = "Cosmic", income = "$3.5M/s" },
+            { name = "Oni Tiger Egg", rarity = "Secret", income = "$75M/s" },
+            { name = "Kitsune Egg", rarity = "Eternal", income = "$180M/s" },
+        },
+    },
+    {
+        name = "Titan Temple",
+        speedReq = 7000000000,
+        eggs = {
+            { name = "Spideron Egg", rarity = "Legendary", income = "$120K/s" },
+            { name = "Crustacia Egg", rarity = "Legendary", income = "$150K/s" },
+            { name = "Bladehide Egg", rarity = "Mythic", income = "$550K/s" },
+            { name = "Mantaris Egg", rarity = "Mythic", income = "$700K/s" },
+            { name = "Rhinotaur Egg", rarity = "Cosmic", income = "$4.5M/s" },
+            { name = "Mutant Shark Egg", rarity = "Secret", income = "$110M/s" },
+            { name = "Gorilla King Egg", rarity = "Eternal", income = "$280M/s" },
+            { name = "Nightflame Egg", rarity = "Divine", income = "$1.2B/s" },
+        },
+    },
+    {
+        name = "Angels & Demons",
+        speedReq = 20000000000,
+        eggs = {
+            { name = "Flame Sprite Egg", rarity = "Legendary", income = "$180K/s" },
+            { name = "Light Dove Egg", rarity = "Legendary", income = "$180K/s" },
+            { name = "Toro Egg", rarity = "Mythic", income = "$850K/s" },
+            { name = "Winged Lamb Egg", rarity = "Mythic", income = "$850K/s" },
+            { name = "Imp Egg", rarity = "Cosmic", income = "$6M/s" },
+            { name = "Sacred Moth Egg", rarity = "Cosmic", income = "$6M/s" },
+            { name = "Demon Hound Egg", rarity = "Cosmic", income = "$8M/s" },
+            { name = "Holy Peacock Egg", rarity = "Cosmic", income = "$8M/s" },
+            { name = "Gargoyle Egg", rarity = "Secret", income = "$150M/s" },
+            { name = "Pure Jellyfish Egg", rarity = "Secret", income = "$150M/s" },
+            { name = "RazorFang Egg", rarity = "Secret", income = "$200M/s" },
+            { name = "Centaur Egg", rarity = "Secret", income = "$200M/s" },
+            { name = "Skeleton Horse Egg", rarity = "Eternal", income = "$500M/s" },
+            { name = "Pegasus Egg", rarity = "Eternal", income = "$500M/s" },
+            { name = "World Burner Egg", rarity = "Divine", income = "$2B/s" },
+            { name = "ArchAngel Egg", rarity = "Divine", income = "$2B/s" },
+        },
+    },
+    {
+        name = "Enchanted Forest",
+        speedReq = 50000000000,
+        eggs = {
+            { name = "Prism Gecko Egg", rarity = "Legendary", income = "$250K/s" },
+            { name = "Petal Beetle Egg", rarity = "Mythic", income = "$1.2M/s" },
+            { name = "Enchanted Bluejay Egg", rarity = "Mythic", income = "$1.5M/s" },
+            { name = "Astral Jackalope Egg", rarity = "Cosmic", income = "$12M/s" },
+            { name = "Spirit Panda Egg", rarity = "Cosmic", income = "$15M/s" },
+            { name = "Starry Fox Egg", rarity = "Secret", income = "$350M/s" },
+            { name = "Celestial Sunlion Egg", rarity = "Eternal", income = "$1.5B/s" },
+            { name = "Royal Skywhale Egg", rarity = "Divine", income = "$5B/s" },
+        },
+    },
+}
+
+-- Rarity colors para sa UI
+local RarityColors = {
+    Common      = Color3.fromRGB(180, 180, 180),
+    Uncommon    = Color3.fromRGB(90, 200, 90),
+    Rare        = Color3.fromRGB(70, 140, 255),
+    Epic        = Color3.fromRGB(170, 80, 255),
+    Legendary   = Color3.fromRGB(255, 180, 50),
+    Mythic      = Color3.fromRGB(255, 70, 70),
+    Cosmic      = Color3.fromRGB(255, 120, 200),
+    Secret      = Color3.fromRGB(255, 50, 150),
+    Eternal     = Color3.fromRGB(0, 255, 200),
+    Divine      = Color3.fromRGB(255, 215, 0),
+}
+
+--==================== THEMES ====================--
+local Themes = {
+    ["Blue/Black"] = {
+        bg        = Color3.fromRGB(12, 16, 26),
+        panel     = Color3.fromRGB(22, 28, 44),
+        header    = Color3.fromRGB(16, 22, 36),
+        accent    = Color3.fromRGB(0, 140, 255),
+        accent2   = Color3.fromRGB(0, 80, 180),
+        text      = Color3.fromRGB(235, 240, 250),
+        subtext   = Color3.fromRGB(150, 165, 190),
+        toggleOff = Color3.fromRGB(48, 58, 80),
+        selected  = Color3.fromRGB(0, 100, 200),
+    },
+    ["White/Gold"] = {
+        bg        = Color3.fromRGB(242, 242, 246),
+        panel     = Color3.fromRGB(255, 255, 255),
+        header    = Color3.fromRGB(255, 255, 255),
+        accent    = Color3.fromRGB(212, 175, 55),
+        accent2   = Color3.fromRGB(160, 128, 25),
+        text      = Color3.fromRGB(35, 35, 40),
+        subtext   = Color3.fromRGB(120, 120, 130),
+        toggleOff = Color3.fromRGB(212, 212, 220),
+        selected  = Color3.fromRGB(230, 200, 100),
+    },
+    ["Purple/Black"] = {
+        bg        = Color3.fromRGB(14, 10, 22),
+        panel     = Color3.fromRGB(26, 18, 40),
+        header    = Color3.fromRGB(19, 13, 30),
+        accent    = Color3.fromRGB(150, 70, 255),
+        accent2   = Color3.fromRGB(100, 40, 190),
+        text      = Color3.fromRGB(240, 235, 255),
+        subtext   = Color3.fromRGB(165, 150, 195),
+        toggleOff = Color3.fromRGB(55, 44, 78),
+        selected  = Color3.fromRGB(110, 50, 200),
+    },
+}
+
+local CurrentTheme = Themes["Blue/Black"]
+local ThemeTargets = {}
+local ToggleRegistry = {}
+
+local function link(obj, prop, role)
+    ThemeTargets[#ThemeTargets + 1] = { obj = obj, prop = prop, role = role }
+    return obj
+end
+
+local function ApplyTheme(name)
+    local t = Themes[name]
+    if not t then return end
+    CurrentTheme = t
+
+    for _, e in ipairs(ThemeTargets) do
+        pcall(function() e.obj[e.prop] = t[e.role] end)
+    end
+    for _, tog in ipairs(ToggleRegistry) do
+        tog.pill.BackgroundColor3 = tog.isOn() and t.accent or t.toggleOff
+    end
+end
+
+--==================== HELPERS ====================--
+local function corner(obj, r)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, r)
+    c.Parent = obj
+    return c
+end
+
+local function makeDraggable(frame, onClick)
+    local dragging, moved = false, false
+    local dragStart, startPos
+
+    local function inside(pos)
+        local ap, as = frame.AbsolutePosition, frame.AbsoluteSize
+        return pos.X >= ap.X and pos.X <= ap.X + as.X
+           and pos.Y >= ap.Y and pos.Y <= ap.Y + as.Y
+    end
+
+    UIS.InputBegan:Connect(function(input, gpe)
+        if gpe then return end
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            if inside(input.Position) then
+                dragging = true
+                moved    = false
+                dragStart = input.Position
+                startPos  = frame.Position
+            end
+        end
+    end)
+
+    UIS.InputChanged:Connect(function(input)
+        if not dragging then return end
+        if input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch then
+            local delta = input.Position - dragStart
+            if math.abs(delta.X) > 4 or math.abs(delta.Y) > 4 then
+                moved = true
+            end
+            frame.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+
+    UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            if dragging and not moved and onClick then
+                onClick()
+            end
+            dragging = false
+        end
+    end)
+end
+
+local function notify(text)
+    local n = Instance.new("TextLabel")
+    n.Size = UDim2.fromOffset(340, 36)
+    n.Position = UDim2.new(0.5, -170, 1, -100)
+    n.BackgroundColor3 = CurrentTheme.panel
+    n.BackgroundTransparency = 1
+    n.TextTransparency = 1
+    n.Text = text
+    n.Font = Enum.Font.GothamMedium
+    n.TextSize = 13
+    n.TextColor3 = CurrentTheme.accent
+    n.BorderSizePixel = 0
+    n.Parent = screenGui
+    corner(n, 10)
+
+    local s = Instance.new("UIStroke")
+    s.Color = CurrentTheme.accent
+    s.Transparency = 1
+    s.Parent = n
+
+    TweenService:Create(n, TweenInfo.new(0.2), { BackgroundTransparency = 0.1, TextTransparency = 0 }):Play()
+    TweenService:Create(s, TweenInfo.new(0.2), { Transparency = 0.4 }):Play()
+
+    task.delay(2, function()
+        TweenService:Create(n, TweenInfo.new(0.3), { BackgroundTransparency = 1, TextTransparency = 1 }):Play()
+        TweenService:Create(s, TweenInfo.new(0.3), { Transparency = 1 }):Play()
+        task.wait(0.35)
+        n:Destroy()
+    end)
+end
+
+--==================== SCREEN GUI ====================--
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "XdrgHub"
+screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.Parent = Parent
+
+--==================== CIRCLE TOGGLE BUTTON ====================--
+local circle = Instance.new("Frame")
+circle.Name = "CircleToggle"
+circle.Size = UDim2.fromOffset(56, 56)
+circle.Position = UDim2.new(0, 30, 0.5, -28)
+circle.BackgroundColor3 = CurrentTheme.accent
+circle.BorderSizePixel = 0
+circle.Parent = screenGui
+corner(circle, 999)
+link(circle, "BackgroundColor3", "accent")
+
+local circleStroke = Instance.new("UIStroke")
+circleStroke.Thickness = 2
+circleStroke.Color = CurrentTheme.accent2
+circleStroke.Parent = circle
+link(circleStroke, "Color", "accent2")
+
+local circleText = Instance.new("TextLabel")
+circleText.Size = UDim2.fromScale(1, 1)
+circleText.BackgroundTransparency = 1
+circleText.Text = "X"
+circleText.Font = Enum.Font.GothamBlack
+circleText.TextSize = 24
+circleText.TextColor3 = Color3.fromRGB(255, 255, 255)
+circleText.Parent = circle
+
+--==================== MAIN WINDOW ====================--
+local main = Instance.new("Frame")
+main.Name = "Main"
+main.Size = UDim2.fromOffset(520, 580)
+main.Position = UDim2.new(0.5, -260, 0.5, -290)
+main.BackgroundColor3 = CurrentTheme.bg
+main.BorderSizePixel = 0
+main.Visible = false
+main.Parent = screenGui
+corner(main, 14)
+link(main, "BackgroundColor3", "bg")
+
+local mainStroke = Instance.new("UIStroke")
+mainStroke.Thickness = 1.5
+mainStroke.Transparency = 0.3
+mainStroke.Color = CurrentTheme.accent
+mainStroke.Parent = main
+link(mainStroke, "Color", "accent")
+
+--========== HEADER ==========--
+local header = Instance.new("Frame")
+header.Size = UDim2.new(1, 0, 0, 52)
+header.BackgroundColor3 = CurrentTheme.header
+header.BorderSizePixel = 0
+header.Parent = main
+corner(header, 14)
+link(header, "BackgroundColor3", "header")
+
+local headerFill = Instance.new("Frame")
+headerFill.Size = UDim2.new(1, 0, 0, 16)
+headerFill.Position = UDim2.new(0, 0, 1, -14)
+headerFill.BackgroundColor3 = CurrentTheme.header
+headerFill.BorderSizePixel = 0
+headerFill.Parent = header
+link(headerFill, "BackgroundColor3", "header")
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Text = "Xdrg Hub"
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextSize = 20
+titleLabel.TextColor3 = CurrentTheme.accent
+titleLabel.BackgroundTransparency = 1
+titleLabel.Position = UDim2.new(0, 16, 0, 7)
+titleLabel.Size = UDim2.new(1, -80, 0, 22)
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Parent = header
+link(titleLabel, "TextColor3", "accent")
+
+local subLabel = Instance.new("TextLabel")
+subLabel.Text = "Steal An Egg  •  v3.0  •  Egg Selection"
+subLabel.Font = Enum.Font.Gotham
+subLabel.TextSize = 11
+subLabel.TextColor3 = CurrentTheme.subtext
+subLabel.BackgroundTransparency = 1
+subLabel.Position = UDim2.new(0, 17, 0, 28)
+subLabel.Size = UDim2.new(1, -80, 0, 14)
+subLabel.TextXAlignment = Enum.TextXAlignment.Left
+subLabel.Parent = header
+link(subLabel, "TextColor3", "subtext")
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.fromOffset(28, 28)
+closeBtn.Position = UDim2.new(1, -38, 0.5, -14)
+closeBtn.BackgroundColor3 = CurrentTheme.panel
+closeBtn.Text = "✕"
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 14
+closeBtn.TextColor3 = CurrentTheme.text
+closeBtn.AutoButtonColor = false
+closeBtn.BorderSizePixel = 0
+closeBtn.Parent = header
+corner(closeBtn, 8)
+link(closeBtn, "BackgroundColor3", "panel")
+link(closeBtn, "TextColor3", "text")
+
+--========== TAB BUTTONS ==========--
+local tabBar = Instance.new("Frame")
+tabBar.Size = UDim2.new(1, -20, 0, 34)
+tabBar.Position = UDim2.new(0, 10, 0, 56)
+tabBar.BackgroundColor3 = CurrentTheme.panel
+tabBar.BorderSizePixel = 0
+tabBar.Parent = main
+corner(tabBar, 8)
+link(tabBar, "BackgroundColor3", "panel")
+
+local tabLayout = Instance.new("UIListLayout")
+tabLayout.FillDirection = Enum.FillDirection.Horizontal
+tabLayout.Padding = UDim.new(0, 4)
+tabLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+tabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+tabLayout.Parent = tabBar
+
+local Tabs = {}
+local ActiveTab = nil
+
+local function makeTab(name)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1/4, -6, 0, 26)
+    btn.BackgroundColor3 = CurrentTheme.header
+    btn.Text = name
+    btn.Font = Enum.Font.GothamMedium
+    btn.TextSize = 12
+    btn.TextColor3 = CurrentTheme.subtext
+    btn.AutoButtonColor = false
+    btn.BorderSizePixel = 0
+    btn.Parent = tabBar
+    corner(btn, 6)
+    link(btn, "BackgroundColor3", "header")
+    link(btn, "TextColor3", "subtext")
+
+    local page = Instance.new("ScrollingFrame")
+    page.Size = UDim2.new(1, -20, 1, -116)
+    page.Position = UDim2.new(0, 10, 0, 96)
+    page.BackgroundTransparency = 1
+    page.BorderSizePixel = 0
+    page.ScrollBarThickness = 3
+    page.ScrollBarImageColor3 = CurrentTheme.accent
+    page.CanvasSize = UDim2.new(0, 0, 0, 0)
+    page.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    page.Visible = false
+    page.Parent = main
+    link(page, "ScrollBarImageColor3", "accent")
+
+    local list = Instance.new("UIListLayout")
+    list.Padding = UDim.new(0, 6)
+    list.SortOrder = Enum.SortOrder.LayoutOrder
+    list.Parent = page
+
+    Tabs[name] = { btn = btn, page = page, list = list }
+
+    btn.MouseButton1Click:Connect(function()
+        if ActiveTab then
+            Tabs[ActiveTab].btn.BackgroundColor3 = CurrentTheme.header
+            Tabs[ActiveTab].btn.TextColor3 = CurrentTheme.subtext
+            Tabs[ActiveTab].page.Visible = false
+        end
+        ActiveTab = name
+        btn.BackgroundColor3 = CurrentTheme.accent
+        btn.TextColor3 = CurrentTheme.bg
+        page.Visible = true
+    end)
+
+    return Tabs[name]
+end
+
+makeTab("Features")
+makeTab("Egg Select")
+makeTab("Title")
+makeTab("Theme")
+
+-- Activate Features tab by default
+task.defer(function()
+    Tabs["Features"].btn:GetPropertyChangedSignal("AbsolutePosition"):Wait()
+    Tabs["Features"].btn.MouseButton1Click:Fire()
+end)
+
+--==================== UI BUILDERS ====================--
+local function makeSection(parentList, text)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, 0, 0, 20)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 12
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.TextColor3 = CurrentTheme.accent
+    lbl.Parent = parentList
+    link(lbl, "TextColor3", "accent")
+    return lbl
+end
+
+local function makeToggle(parentList, text, callback)
+    local row = Instance.new("TextButton")
+    row.Size = UDim2.new(1, 0, 0, 42)
+    row.BackgroundColor3 = CurrentTheme.panel
+    row.AutoButtonColor = false
+    row.Text = ""
+    row.BorderSizePixel = 0
+    row.Parent = parentList
+    corner(row, 10)
+    link(row, "BackgroundColor3", "panel")
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -80, 1, 0)
+    label.Position = UDim2.new(0, 14, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.Font = Enum.Font.GothamMedium
+    label.TextSize = 14
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = row
+    link(label, "TextColor3", "text")
+
+    local pill = Instance.new("Frame")
+    pill.Size = UDim2.fromOffset(46, 24)
+    pill.Position = UDim2.new(1, -60, 0.5, -12)
+    pill.BackgroundColor3 = CurrentTheme.toggleOff
+    pill.BorderSizePixel = 0
+    pill.Parent = row
+    corner(pill, 12)
+
+    local knob = Instance.new("Frame")
+    knob.Size = UDim2.fromOffset(18, 18)
+    knob.Position = UDim2.new(0, 3, 0.5, -9)
+    knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    knob.BorderSizePixel = 0
+    knob.Parent = pill
+    corner(knob, 9)
+
+    local state = false
+
+    local function setState(v, silent)
+        state = v
+        local t = CurrentTheme
+        TweenService:Create(pill, TweenInfo.new(0.18), {
+            BackgroundColor3 = v and t.accent or t.toggleOff
+        }):Play()
+        TweenService:Create(knob, TweenInfo.new(0.18), {
+            Position = v and UDim2.new(1, -21, 0.5, -9) or UDim2.new(0, 3, 0.5, -9)
+        }):Play()
+        callback(v, silent)
+    end
+
+    row.MouseButton1Click:Connect(function()
+        setState(not state)
+    end)
+
+    ToggleRegistry[#ToggleRegistry + 1] = {
+        pill = pill,
+        isOn = function() return state end
+    }
+
+    return { setState = setState, getState = function() return state end }
+end
+
+--==================== FEATURE FLAGS ====================--
+local Flags = {
+    NoKnockback  = false,
+    AntiRagdoll  = false,
+    AntiFling    = false,
+    AntiGuard    = false,
+    FlySteal     = false,
+    AutoSteal    = false,
+}
+
+--==================== SELECTED EGGS TRACKER ====================--
+-- Ito ang listahan ng mga egg na pinili ng user
+-- Format: { ["Egg Name"] = true, ... }
+local SelectedEggs = {}
+
+local function isEggSelected(eggName)
+    return SelectedEggs[eggName] == true
+end
+
+local function toggleEggSelection(eggName, btn, defaultColor)
+    if SelectedEggs[eggName] then
+        SelectedEggs[eggName] = nil
+        btn.BackgroundColor3 = defaultColor
+        btn.UIStroke.Transparency = 1
+    else
+        SelectedEggs[eggName] = true
+        btn.BackgroundColor3 = CurrentTheme.selected
+        btn.UIStroke.Transparency = 0
+    end
+end
+
+local function getSelectedCount()
+    local count = 0
+    for _ in pairs(SelectedEggs) do count = count + 1 end
+    return count
+end
+
+--==================== ANTI-HIT CORE ====================--
+local function isMover(inst)
+    return inst:IsA("BodyVelocity")
+        or inst:IsA("BodyAngularVelocity")
+        or inst:IsA("BodyThrust")
+        or inst:IsA("BodyForce")
+        or inst:IsA("BodyGyro")
+        or inst:IsA("VectorForce")
+        or inst:IsA("LinearVelocity")
+        or inst:IsA("AngularVelocity")
+        or inst:IsA("Torque")
+        or inst:IsA("AlignPosition")
+        or inst:IsA("AlignOrientation")
+end
+
+local function restoreStates()
+    local char = LP.Character
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    pcall(function()
+        hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
+        hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
+        hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, true)
+    end)
+end
+
+local function hookCharacter(char)
+    char.DescendantAdded:Connect(function(d)
+        if (Flags.NoKnockback or Flags.AntiFling) and isMover(d) then
+            task.defer(function()
+                if d and d.Parent then d:Destroy() end
+            end)
+        end
+    end)
+end
+
+if LP.Character then hookCharacter(LP.Character) end
+LP.CharacterAdded:Connect(hookCharacter)
+
+--==================== FLY SYSTEM ====================--
+local Fly = {
+    active = false,
+    speed = 430,
+    bodyVel = nil,
+    bodyGyro = nil,
+    connection = nil,
+}
+
+local function stopFly()
+    if Fly.bodyVel then Fly.bodyVel:Destroy() Fly.bodyVel = nil end
+    if Fly.bodyGyro then Fly.bodyGyro:Destroy() Fly.bodyGyro = nil end
+    if Fly.connection then Fly.connection:Disconnect() Fly.connection = nil end
+    Fly.active = false
+end
+
+local function startFly()
+    local char = LP.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    stopFly()
+    Fly.active = true
+
+    local bv = Instance.new("BodyVelocity")
+    bv.Name = "XdrgFlyVel"
+    bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+    bv.Velocity = Vector3.zero
+    bv.Parent = hrp
+
+    local bg = Instance.new("BodyGyro")
+    bg.Name = "XdrgFlyGyro"
+    bg.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
+    bg.P = 3000
+    bg.D = 50
+    bg.Parent = hrp
+
+    Fly.bodyVel = bv
+    Fly.bodyGyro = bg
+
+    Fly.connection = RunService.RenderStepped:Connect(function()
+        if not Fly.active or not hrp.Parent then
+            stopFly()
+            return
+        end
+        local cam = workspace.CurrentCamera
+        local dir = Vector3.zero
+
+        if UIS:IsKeyDown(Enum.KeyCode.W) then dir = dir + cam.CFrame.LookVector end
+        if UIS:IsKeyDown(Enum.KeyCode.S) then dir = dir - cam.CFrame.LookVector end
+        if UIS:IsKeyDown(Enum.KeyCode.A) then dir = dir - cam.CFrame.RightVector end
+        if UIS:IsKeyDown(Enum.KeyCode.D) then dir = dir + cam.CFrame.RightVector end
+        if UIS:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0, 1, 0) end
+        if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then dir = dir - Vector3.new(0, 1, 0) end
+
+        if dir.Magnitude > 0 then
+            bv.Velocity = dir.Unit * Fly.speed
+        else
+            bv.Velocity = Vector3.zero
+        end
+
+        bg.CFrame = cam.CFrame
+    end)
+end
+
+--==================== EGG FINDER & STEAL ====================--
+local function getEggPosition(egg)
+    if egg:IsA("Model") and egg.PrimaryPart then
+        return egg.PrimaryPart.Position
+    elseif egg:IsA("BasePart") then
+        return egg.Position
+    end
+    return nil
+end
+
+local function getProximityPrompt(egg)
+    for _, d in ipairs(egg:GetDescendants()) do
+        if d:IsA("ProximityPrompt") and d.Enabled then
+            return d
+        end
+    end
+    for _, d in ipairs(egg:GetDescendants()) do
+        if d:IsA("ProximityPrompt") then
+            return d
+        end
+    end
+    return nil
+end
+
+-- Hanapin ang egg folder sa workspace
+local function findEggFolder()
+    local eggsFolder = workspace:FindFirstChild("Eggs")
+    if eggsFolder then return eggsFolder end
+
+    for _, v in ipairs(workspace:GetChildren()) do
+        if v:IsA("Folder") and v.Name:lower():find("egg") then
+            return v
+        end
+    end
+    return nil
+end
+
+-- Hanapin ang pinakamalayong egg na selected, base sa biome order
+local function findPriorityEgg()
+    local char = LP.Character
+    if not char then return nil end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return nil end
+
+    local eggsFolder = findEggFolder()
+    if not eggsFolder then return nil end
+
+    local bestEgg, bestEggDist = nil, -1  -- -1 para pinakamalayo ang priority
+
+    -- Loop sa lahat ng eggs sa folder
+    for _, egg in ipairs(eggsFolder:GetChildren()) do
+        local pos = getEggPosition(egg)
+        if pos then
+            local dist = (pos - hrp.Position).Magnitude
+            local eggName = egg.Name
+
+            -- Check kung selected ang egg na ito
+            -- Pwede ring i-check kung ang eggName ay naglalaman ng selected na pangalan
+            local selected = false
+            for selName, _ in pairs(SelectedEggs) do
+                if eggName == selName or eggName:find(selName) or selName:find(eggName) then
+                    selected = true
+                    break
+                end
+            end
+
+            -- Kung walang selected eggs, piliin ang lahat (fallback)
+            if next(SelectedEggs) == nil then
+                selected = true
+            end
+
+            if selected then
+                if dist > bestEggDist then
+                    bestEggDist = dist
+                    bestEgg = egg
+                end
+            end
+        end
+    end
+
+    return bestEgg, bestEggDist
+end
+
+local function tryStealEgg(egg)
+    if not egg then return false end
+    local char = LP.Character
+    if not char then return false end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
+
+    local pos = getEggPosition(egg)
+    if not pos then return false end
+
+    local prompt = getProximityPrompt(egg)
+    if prompt then
+        -- Kailangan malapit — kung malayo, i-teleport muna
+        local dist = (pos - hrp.Position).Magnitude
+        if dist > prompt.MaxActivationDistance then
+            hrp.CFrame = CFrame.new(pos)
+            task.wait(0.1)
+        end
+        pcall(function()
+            fireproximityprompt(prompt)
+        end)
+        return true
+    end
+
+    -- Fallback: fire RemoteEvents
+    for _, d in ipairs(egg:GetDescendants()) do
+        if d:IsA("RemoteEvent") then
+            pcall(function()
+                d:FireServer()
+            end)
+        end
+    end
+    return false
+end
+
+local function autoStealLoop()
+    if not (Flags.AutoSteal or Flags.FlySteal) then return end
+    if getSelectedCount() == 0 and not Flags.AutoSteal then return end
+
+    local egg = findPriorityEgg()
+    if egg then
+        tryStealEgg(egg)
+    end
+end
+
+--==================== ANTI-GUARD HIT ====================--
+local function antiGuardLoop()
+    if not Flags.AntiGuard then return end
+    local char = LP.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") then
+            local n = obj.Name:lower()
+            if (n:find("guard") or n:find("hitbox") or n:find("damage"))
+            and obj:IsDescendantOf(workspace) then
+                local dist = (obj.Position - hrp.Position).Magnitude
+                if dist < 30 then
+                    pcall(function()
+                        obj.CanCollide = false
+                        obj.CanTouch = false
+                        obj.CanQuery = false
+                    end)
+                end
+            end
+        end
+    end
+end
+
+--==================== MAIN LOOP ====================--
+RunService.Heartbeat:Connect(function()
+    if Flags.NoKnockback or Flags.AntiRagdoll or Flags.AntiFling then
+        local char = LP.Character
+        if char then
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+
+            if (Flags.NoKnockback or Flags.AntiRagdoll) and hum then
+                pcall(function()
+                    hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+                    hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+                    hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, false)
+
+                    local st = hum:GetState()
+                    if st == Enum.HumanoidStateType.FallingDown
+                    or st == Enum.HumanoidStateType.Ragdoll
+                    or st == Enum.HumanoidStateType.PlatformStanding then
+                        hum:ChangeState(Enum.HumanoidStateType.Running)
+                    end
+                end)
+            end
+
+            if (Flags.NoKnockback or Flags.AntiFling) and hrp then
+                for _, v in ipairs(hrp:GetChildren()) do
+                    if isMover(v) then
+                        v:Destroy()
+                    end
+                end
+            end
+        end
+    end
+
+    if Flags.AutoSteal or Flags.FlySteal then
+        autoStealLoop()
+    end
+
+    if Flags.AntiGuard then
+        antiGuardLoop()
+    end
+end)
+
+--==================== BUILD FEATURES TAB ====================--
+local featPage = Tabs["Features"].page
+local featList = Tabs["Features"].list
+
+makeSection(featList, "🛡️ ANTI-HIT FEATURES")
+
+makeToggle(featList, "No Knockback", function(on, silent)
+    Flags.NoKnockback = on
+    if not on and not Flags.AntiRagdoll then restoreStates() end
+    if not silent then notify(on and "No Knockback: ON" or "No Knockback: OFF") end
+end)
+
+makeToggle(featList, "Anti Ragdoll", function(on, silent)
+    Flags.AntiRagdoll = on
+    if not on and not Flags.NoKnockback then restoreStates() end
+    if not silent then notify(on and "Anti Ragdoll: ON" or "Anti Ragdoll: OFF") end
+end)
+
+makeToggle(featList, "Anti Fling", function(on, silent)
+    Flags.AntiFling = on
+    if not silent then notify(on and "Anti Fling: ON" or "Anti Fling: OFF") end
+end)
+
+makeToggle(featList, "Anti Guard Hit", function(on, silent)
+    Flags.AntiGuard = on
+    if not silent then notify(on and "Anti Guard Hit: ON" or "Anti Guard Hit: OFF") end
+end)
+
+makeSection(featList, "🥚 STEAL & FLY FEATURES")
+
+makeToggle(featList, "Instant Steal Fly (430)", function(on, silent)
+    Flags.FlySteal = on
+    if on then
+        startFly()
+        if not silent then notify("Instant Steal Fly: ON — Speed 430") end
+    else
+        stopFly()
+        if not silent then notify("Instant Steal Fly: OFF") end
+    end
+end)
+
+makeToggle(featList, "Auto Steal (Selected Eggs)", function(on, silent)
+    Flags.AutoSteal = on
+    if not silent then
+        local cnt = getSelectedCount()
+        notify(on and ("Auto Steal: ON — " .. cnt .. " egg(s) selected") or "Auto Steal: OFF")
+    end
+end)
+
+makeToggle(featList, "Fly (No Steal)", function(on, silent)
+    if on then
+        startFly()
+        Flags.FlySteal = false
+        if not silent then notify("Fly: ON — Speed " .. Fly.speed) end
+    else
+        stopFly()
+        if not silent then notify("Fly: OFF") end
+    end
+end)
+
+--==================== BUILD EGG SELECT TAB ====================--
+local eggPage = Tabs["Egg Select"].page
+local eggList = Tabs["Egg Select"].list
+
+-- Header info
+local eggInfo = Instance.new("TextLabel")
+eggInfo.Size = UDim2.new(1, 0, 0, 40)
+eggInfo.BackgroundTransparency = 1
+eggInfo.Text = "Pumili ng egg na gusto mong i-auto steal.\nPriority: PINAKAMALAYONG area na may selected egg."
+eggInfo.Font = Enum.Font.Gotham
+eggInfo.TextSize = 11
+eggInfo.TextColor3 = CurrentTheme.subtext
+eggInfo.TextWrapped = true
+eggInfo.TextXAlignment = Enum.TextXAlignment.Left
+eggInfo.Parent = eggList
+link(eggInfo, "TextColor3", "subtext")
+
+-- Quick buttons
+local quickFrame = Instance.new("Frame")
+quickFrame.Size = UDim2.new(1, 0, 0, 32)
+quickFrame.BackgroundTransparency = 1
+quickFrame.Parent = eggList
+
+local quickLayout = Instance.new("UIListLayout")
+quickLayout.FillDirection = Enum.FillDirection.Horizontal
+quickLayout.Padding = UDim.new(0, 6)
+quickLayout.Parent = quickFrame
+
+local function makeQuickBtn(text, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.33, -4, 1, 0)
+    btn.BackgroundColor3 = CurrentTheme.panel
+    btn.Text = text
+    btn.Font = Enum.Font.GothamMedium
+    btn.TextSize = 11
+    btn.TextColor3 = CurrentTheme.text
+    btn.AutoButtonColor = false
+    btn.BorderSizePixel = 0
+    btn.Parent = quickFrame
+    corner(btn, 6)
+    link(btn, "BackgroundColor3", "panel")
+    link(btn, "TextColor3", "text")
+    btn.MouseButton1Click:Connect(callback)
+    return btn
+end
+
+-- Clear all button
+makeQuickBtn("Clear All", function()
+    for eggName, _ in pairs(SelectedEggs) do
+        SelectedEggs[eggName] = nil
+    end
+    -- I-refresh ang lahat ng egg buttons
+    for _, child in ipairs(eggList:GetChildren()) do
+        if child:IsA("Frame") then
+            for _, btn in ipairs(child:GetChildren()) do
+                if btn:IsA("TextButton") and btn:GetAttribute("EggName") then
+                    btn.BackgroundColor3 = CurrentTheme.panel
+                    local stroke = btn:FindFirstChildOfClass("UIStroke")
+                    if stroke then stroke.Transparency = 1 end
+                end
+            end
+        end
+    end
+    notify("Cleared all selected eggs")
+end)
+
+-- Select all in biome
+makeQuickBtn("Select All", function()
+    for _, biome in ipairs(BiomeData) do
+        for _, egg in ipairs(biome.eggs) do
+            SelectedEggs[egg.name] = true
+        end
+    end
+    for _, child in ipairs(eggList:GetChildren()) do
+        if child:IsA("Frame") then
+            for _, btn in ipairs(child:GetChildren()) do
+                if btn:IsA("TextButton") and btn:GetAttribute("EggName") then
+                    if SelectedEggs[btn:GetAttribute("EggName")] then
+                        btn.BackgroundColor3 = CurrentTheme.selected
+                        local stroke = btn:FindFirstChildOfClass("UIStroke")
+                        if stroke then stroke.Transparency = 0 end
+                    end
+                end
+            end
+        end
+    end
+    notify("Selected all eggs")
+end)
+
+-- Select only high rarity (Secret+)
+makeQuickBtn("High Rarity+", function()
+    local highRarities = { Secret = true, Eternal = true, Divine = true, Cosmic = true }
+    for _, biome in ipairs(BiomeData) do
+        for _, egg in ipairs(biome.eggs) do
+            if highRarities[egg.rarity] then
+                SelectedEggs[egg.name] = true
+            end
+        end
+    end
+    -- Refresh
+    for _, child in ipairs(eggList:GetChildren()) do
+        if child:IsA("Frame") then
+            for _, btn in ipairs(child:GetChildren()) do
+                if btn:IsA("TextButton") and btn:GetAttribute("EggName") then
+                    if SelectedEggs[btn:GetAttribute("EggName")] then
+                        btn.BackgroundColor3 = CurrentTheme.selected
+                        local stroke = btn:FindFirstChildOfClass("UIStroke")
+                        if stroke then stroke.Transparency = 0 end
+                    end
+                end
+            end
+        end
+    end
+    notify("Selected high rarity eggs (Cosmic+)")
+end)
+
+-- Loop sa bawat biome at gumawa ng egg buttons
+for _, biome in ipairs(BiomeData) do
+    -- Biome header
+    local biomeHeader = Instance.new("TextLabel")
+    biomeHeader.Size = UDim2.new(1, 0, 0, 22)
+    biomeHeader.BackgroundTransparency = 1
+    biomeHeader.Text = biome.name .. "  (" .. biome.speedReq .. " Speed)"
+    biomeHeader.Font = Enum.Font.GothamBold
+    biomeHeader.TextSize = 12
+    biomeHeader.TextXAlignment = Enum.TextXAlignment.Left
+    biomeHeader.TextColor3 = CurrentTheme.accent
+    biomeHeader.Parent = eggList
+    link(biomeHeader, "TextColor3", "accent")
+
+    -- Egg grid (2 columns)
+    local grid = Instance.new("Frame")
+    grid.Size = UDim2.new(1, 0, 0, math.ceil(#biome.eggs / 2) * 38 + 10)
+    grid.BackgroundTransparency = 1
+    grid.Parent = eggList
+
+    local gridLayout = Instance.new("UIGridLayout")
+    gridLayout.CellSize = UDim2.new(0.5, -4, 0, 34)
+    gridLayout.CellPadding = UDim2.new(0, 8, 0, 4)
+    gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    gridLayout.Parent = grid
+
+    for _, egg in ipairs(biome.eggs) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(0.5, -4, 0, 34)
+        btn.BackgroundColor3 = CurrentTheme.panel
+        btn.Text = egg.name:gsub(" Egg", "") .. "  [" .. egg.rarity .. "]"
+        btn.Font = Enum.Font.Gotham
+        btn.TextSize = 10
+        btn.TextColor3 = CurrentTheme.text
+        btn.AutoButtonColor = false
+        btn.BorderSizePixel = 0
+        btn.TextTruncate = Enum.TextTruncate.AtEnd
+        btn.Parent = grid
+        corner(btn, 6)
+        link(btn, "BackgroundColor3", "panel")
+        link(btn, "TextColor3", "text")
+        btn:SetAttribute("EggName", egg.name)
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = RarityColors[egg.rarity] or CurrentTheme.accent
+        stroke.Thickness = 1.5
+        stroke.Transparency = 1
+        stroke.Parent = btn
+
+        -- Rarity indicator dot
+        local dot = Instance.new("Frame")
+        dot.Size = UDim2.fromOffset(6, 6)
+        dot.Position = UDim2.new(1, -14, 0, 6)
+        dot.BackgroundColor3 = RarityColors[egg.rarity] or Color3.new(1, 1, 1)
+        dot.BorderSizePixel = 0
+        dot.Parent = btn
+        corner(dot, 3)
+
+        btn.MouseButton1Click:Connect(function()
+            toggleEggSelection(egg.name, btn, CurrentTheme.panel)
+            local cnt = getSelectedCount()
+            notify(egg.name .. " — " .. (SelectedEggs[egg.name] and "SELECTED" or "REMOVED") .. "  (" .. cnt .. " total)")
+        end)
+    end
+end
+
+--==================== BUILD TITLE TAB ====================--
+local titlePage = Tabs["Title"].page
+local titleList = Tabs["Title"].list
+
+makeSection(titleList, "📝 UI TITLE")
+
+local titleOptions = {
+    "Xdrg Hub",
+    "Xdragon Hub",
+    "Si Cloude ay Pangit",
+    "Si Summere ay Pangit",
+}
+
+for _, txt in ipairs(titleOptions) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 38)
+    btn.BackgroundColor3 = CurrentTheme.panel
+    btn.Text = txt
+    btn.Font = Enum.Font.GothamMedium
+    btn.TextSize = 14
+    btn.TextColor3 = CurrentTheme.text
+    btn.AutoButtonColor = false
+    btn.BorderSizePixel = 0
+    btn.Parent = titleList
+    corner(btn, 8)
+    link(btn, "BackgroundColor3", "panel")
+    link(btn, "TextColor3", "text")
+
+    btn.MouseButton1Click:Connect(function()
+        titleLabel.Text = txt
+        notify("Title set: " .. txt)
+    end)
+end
+
+--==================== BUILD THEME TAB ====================--
+local themePage = Tabs["Theme"].page
+local themeList = Tabs["Theme"].list
+
+makeSection(themeList, "🎨 THEME")
+
+local themeNames = { "Blue/Black", "White/Gold", "Purple/Black" }
+
+for _, name in ipairs(themeNames) do
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 38)
+    btn.BackgroundColor3 = CurrentTheme.panel
+    btn.Text = name
+    btn.Font = Enum.Font.GothamMedium
+    btn.TextSize = 14
+    btn.TextColor3 = CurrentTheme.text
+    btn.AutoButtonColor = false
+    btn.BorderSizePixel = 0
+    btn.Parent = themeList
+    corner(btn, 8)
+    link(btn, "BackgroundColor3", "panel")
+    link(btn, "TextColor3", "text")
+
+    btn.MouseButton1Click:Connect(function()
+        ApplyTheme(name)
+        notify("Theme: " .. name)
+    end)
+end
+
+--==================== WIRING ====================--
+makeDraggable(main)
+makeDraggable(circle, function()
+    main.Visible = not main.Visible
+end)
+
+closeBtn.MouseButton1Click:Connect(function()
+    main.Visible = false
+end)
+
+--==================== INIT ====================--
+ApplyTheme("Blue/Black")
+notify("Xdrg Hub v3.0 loaded ✓")
