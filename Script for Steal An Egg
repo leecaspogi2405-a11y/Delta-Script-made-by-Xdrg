@@ -1,628 +1,298 @@
 --[[
-=====================================================================
-   X D R G   H U B   v6.0 — DRAG + RESIZE FIXED
-   
-   Fixes in v6.0:
-   - Working drag on circle button (frame.InputBegan based)
-   - Working drag on main window
-   - Resize handle (bottom-right corner)
-   - Minimum size clamp (420x400)
-   - All previous features intact
-=====================================================================
+   XDRG HUB v7.0 - MOBILE COMPACT
+   Fixed: buttons showing, mobile size, drag works
 ]]
 
-local Players      = game:GetService("Players")
-local UIS          = game:GetService("UserInputService")
-local RunService   = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-local LP           = Players.LocalPlayer
+local Players, UIS, RunService, TweenService = game:GetService("Players"), game:GetService("UserInputService"), game:GetService("RunService"), game:GetService("TweenService")
+local LP = Players.LocalPlayer
 
---==================== GUI PARENT ====================--
+-- Parent
 local Parent
-do
-    if gethui then
-        local ok, r = pcall(gethui)
-        if ok and r then Parent = r end
-    end
-    if not Parent then
-        local ok, r = pcall(function() return game:GetService("CoreGui") end)
-        if ok and r then Parent = r end
-    end
-    Parent = Parent or LP:WaitForChild("PlayerGui")
-end
-local old = Parent:FindFirstChild("XdrgHub")
-if old then old:Destroy() end
+if gethui then pcall(function() Parent = gethui() end) end
+if not Parent then pcall(function() Parent = game:GetService("CoreGui") end) end
+Parent = Parent or LP:WaitForChild("PlayerGui")
+local old = Parent:FindFirstChild("XdrgHub") if old then old:Destroy() end
 
---==================== BIOME DATA ====================--
+--========= DATA =========--
 local BiomeData = {
-    { name="Forest", speedReq=0, eggs={
-        {name="Chicken Egg",rarity="Common"},{name="Dog Egg",rarity="Common"},
-        {name="Bird Egg",rarity="Uncommon"},{name="Burrowing Owl Egg",rarity="Rare"},
-        {name="Raccoon Egg",rarity="Rare"},{name="Fox Egg",rarity="Epic"},
-        {name="Bear Egg",rarity="Epic"},{name="Brr Brr Patapim Egg",rarity="Legendary"},
-    }},
-    { name="Lake", speedReq=900, eggs={
-        {name="Frog Egg",rarity="Common"},{name="Duckling Egg",rarity="Common"},
-        {name="Catfish Egg",rarity="Uncommon"},{name="Turtle Egg",rarity="Rare"},
-        {name="Trulimero Trulicina Egg",rarity="Epic"},{name="Swan Egg",rarity="Epic"},
-        {name="Axolotl Egg",rarity="Legendary"},{name="Leviathan Egg",rarity="Cosmic"},
-    }},
-    { name="Desert", speedReq=10000, eggs={
-        {name="Jerboa Egg",rarity="Common"},{name="Fennec Egg",rarity="Uncommon"},
-        {name="Camel Egg",rarity="Rare"},{name="Tob Tobi Tob Tob Egg",rarity="Epic"},
-        {name="Snake Egg",rarity="Legendary"},{name="Sand Spider Egg",rarity="Mythic"},
-        {name="Scorpion Egg",rarity="Mythic"},{name="Royal Sphinx Egg",rarity="Cosmic"},
-    }},
-    { name="Jungle", speedReq=40000, eggs={
-        {name="Chimpanzee Egg",rarity="Rare"},{name="Toucan Egg",rarity="Rare"},
-        {name="Crocodile Egg",rarity="Epic"},{name="Gorilla Egg",rarity="Legendary"},
-        {name="Orangutini Ananassini Egg",rarity="Legendary"},{name="Spider Egg",rarity="Mythic"},
-        {name="Tiger Egg",rarity="Mythic"},{name="King Snake Egg",rarity="Secret"},
-    }},
-    { name="Snow", speedReq=170000, eggs={
-        {name="Penguin Egg",rarity="Rare"},{name="Walrus Egg",rarity="Epic"},
-        {name="Polar Bear Egg",rarity="Legendary"},{name="Sabertooth Tiger Egg",rarity="Mythic"},
-        {name="Mammoth Egg",rarity="Mythic"},{name="King Mammoth Egg",rarity="Cosmic"},
-        {name="Yeti Egg",rarity="Secret"},{name="Ice Dragon Egg",rarity="Eternal"},
-    }},
-    { name="Volcano", speedReq=700000, eggs={
-        {name="Lava Gecko Egg",rarity="Rare"},{name="Lava Frog Egg",rarity="Epic"},
-        {name="Flaming Bull Egg",rarity="Legendary"},{name="Lava Iguana Egg",rarity="Legendary"},
-        {name="Chillin Chilli Egg",rarity="Mythic"},{name="Cerberus Egg",rarity="Secret"},
-        {name="Phoenix Egg",rarity="Eternal"},{name="Lava Dragon Egg",rarity="Eternal"},
-    }},
-    { name="Abyss Ocean", speedReq=2500000, eggs={
-        {name="Parrotfish Egg",rarity="Rare"},{name="Swordfish Egg",rarity="Epic"},
-        {name="Shark Egg",rarity="Legendary"},{name="Orca Egg",rarity="Mythic"},
-        {name="Whale Shark Egg",rarity="Cosmic"},{name="Beluga Whale Egg",rarity="Cosmic"},
-        {name="Kraken Egg",rarity="Secret"},{name="El Maja Egg",rarity="Eternal"},
-    }},
-    { name="Prehistoric", speedReq=18000000, eggs={
-        {name="Dodo Egg",rarity="Rare"},{name="Pterodactyl Egg",rarity="Legendary"},
-        {name="Ankylosaurus Egg",rarity="Mythic"},{name="Triceratops Egg",rarity="Cosmic"},
-        {name="Bronto Egg",rarity="Cosmic"},{name="Tralaledon Egg",rarity="Secret"},
-        {name="T-Rex Egg",rarity="Secret"},{name="Mosasaurus Egg",rarity="Secret"},
-    }},
-    { name="Cherry Blossom", speedReq=2500000000, eggs={
-        {name="Crane Egg",rarity="Epic"},{name="Salamander Egg",rarity="Legendary"},
-        {name="Red Panda Egg",rarity="Mythic"},{name="Snowy Owl Egg",rarity="Mythic"},
-        {name="Koi Egg",rarity="Cosmic"},{name="Stag Egg",rarity="Cosmic"},
-        {name="Oni Tiger Egg",rarity="Secret"},{name="Kitsune Egg",rarity="Eternal"},
-    }},
-    { name="Titan Temple", speedReq=7000000000, eggs={
-        {name="Spideron Egg",rarity="Legendary"},{name="Crustacia Egg",rarity="Legendary"},
-        {name="Bladehide Egg",rarity="Mythic"},{name="Mantaris Egg",rarity="Mythic"},
-        {name="Rhinotaur Egg",rarity="Cosmic"},{name="Mutant Shark Egg",rarity="Secret"},
-        {name="Gorilla King Egg",rarity="Eternal"},{name="Nightflame Egg",rarity="Divine"},
-    }},
-    { name="Angels & Demons", speedReq=20000000000, eggs={
-        {name="Flame Sprite Egg",rarity="Legendary"},{name="Light Dove Egg",rarity="Legendary"},
-        {name="Toro Egg",rarity="Mythic"},{name="Winged Lamb Egg",rarity="Mythic"},
-        {name="Imp Egg",rarity="Cosmic"},{name="Sacred Moth Egg",rarity="Cosmic"},
-        {name="Demon Hound Egg",rarity="Cosmic"},{name="Holy Peacock Egg",rarity="Cosmic"},
-        {name="Gargoyle Egg",rarity="Secret"},{name="Pure Jellyfish Egg",rarity="Secret"},
-        {name="RazorFang Egg",rarity="Secret"},{name="Centaur Egg",rarity="Secret"},
-        {name="Skeleton Horse Egg",rarity="Eternal"},{name="Pegasus Egg",rarity="Eternal"},
-        {name="World Burner Egg",rarity="Divine"},{name="ArchAngel Egg",rarity="Divine"},
-    }},
-    { name="Enchanted Forest", speedReq=50000000000, eggs={
-        {name="Prism Gecko Egg",rarity="Legendary"},{name="Petal Beetle Egg",rarity="Mythic"},
-        {name="Enchanted Bluejay Egg",rarity="Mythic"},{name="Astral Jackalope Egg",rarity="Cosmic"},
-        {name="Spirit Panda Egg",rarity="Cosmic"},{name="Starry Fox Egg",rarity="Secret"},
-        {name="Celestial Sunlion Egg",rarity="Eternal"},{name="Royal Skywhale Egg",rarity="Divine"},
-    }},
+    {name="Forest", eggs={"Chicken","Dog","Bird","Burrowing Owl","Raccoon","Fox","Bear","Brr Brr Patapim"}},
+    {name="Lake", eggs={"Frog","Duckling","Catfish","Turtle","Trulimero Trulicina","Swan","Axolotl","Leviathan"}},
+    {name="Desert", eggs={"Jerboa","Fennec","Camel","Tob Tobi Tob Tob","Snake","Sand Spider","Scorpion","Royal Sphinx"}},
+    {name="Jungle", eggs={"Chimpanzee","Toucan","Crocodile","Gorilla","Orangutini Ananassini","Spider","Tiger","King Snake"}},
+    {name="Snow", eggs={"Penguin","Walrus","Polar Bear","Sabertooth Tiger","Mammoth","King Mammoth","Yeti","Ice Dragon"}},
+    {name="Volcano", eggs={"Lava Gecko","Lava Frog","Flaming Bull","Lava Iguana","Chillin Chilli","Cerberus","Phoenix","Lava Dragon"}},
+    {name="Abyss Ocean", eggs={"Parrotfish","Swordfish","Shark","Orca","Whale Shark","Beluga Whale","Kraken","El Maja"}},
+    {name="Prehistoric", eggs={"Dodo","Pterodactyl","Ankylosaurus","Triceratops","Bronto","Tralaledon","T-Rex","Mosasaurus"}},
+    {name="Cherry Blossom", eggs={"Crane","Salamander","Red Panda","Snowy Owl","Koi","Stag","Oni Tiger","Kitsune"}},
+    {name="Titan Temple", eggs={"Spideron","Crustacia","Bladehide","Mantaris","Rhinotaur","Mutant Shark","Gorilla King","Nightflame"}},
+    {name="Angels & Demons", eggs={"Flame Sprite","Light Dove","Toro","Winged Lamb","Imp","Sacred Moth","Demon Hound","Holy Peacock","Gargoyle","Pure Jellyfish","RazorFang","Centaur","Skeleton Horse","Pegasus","World Burner","ArchAngel"}},
+    {name="Enchanted Forest", eggs={"Prism Gecko","Petal Beetle","Enchanted Bluejay","Astral Jackalope","Spirit Panda","Starry Fox","Celestial Sunlion","Royal Skywhale"}},
 }
 
-local RarityColors = {
-    Common=Color3.fromRGB(180,180,180), Uncommon=Color3.fromRGB(90,200,90),
-    Rare=Color3.fromRGB(70,140,255), Epic=Color3.fromRGB(170,80,255),
-    Legendary=Color3.fromRGB(255,180,50), Mythic=Color3.fromRGB(255,70,70),
-    Cosmic=Color3.fromRGB(255,120,200), Secret=Color3.fromRGB(255,50,150),
-    Eternal=Color3.fromRGB(0,255,200), Divine=Color3.fromRGB(255,215,0),
-}
-
---==================== THEMES ====================--
 local Themes = {
-    ["Blue/Black"]={bg=Color3.fromRGB(12,16,26),panel=Color3.fromRGB(22,28,44),header=Color3.fromRGB(16,22,36),accent=Color3.fromRGB(0,140,255),accent2=Color3.fromRGB(0,80,180),text=Color3.fromRGB(235,240,250),subtext=Color3.fromRGB(150,165,190),toggleOff=Color3.fromRGB(48,58,80),selected=Color3.fromRGB(0,100,200)},
-    ["White/Gold"]={bg=Color3.fromRGB(242,242,246),panel=Color3.fromRGB(255,255,255),header=Color3.fromRGB(255,255,255),accent=Color3.fromRGB(212,175,55),accent2=Color3.fromRGB(160,128,25),text=Color3.fromRGB(35,35,40),subtext=Color3.fromRGB(120,120,130),toggleOff=Color3.fromRGB(212,212,220),selected=Color3.fromRGB(230,200,100)},
-    ["Purple/Black"]={bg=Color3.fromRGB(14,10,22),panel=Color3.fromRGB(26,18,40),header=Color3.fromRGB(19,13,30),accent=Color3.fromRGB(150,70,255),accent2=Color3.fromRGB(100,40,190),text=Color3.fromRGB(240,235,255),subtext=Color3.fromRGB(165,150,195),toggleOff=Color3.fromRGB(55,44,78),selected=Color3.fromRGB(110,50,200)},
+    ["Blue"]={bg=Color3.fromRGB(15,18,28),panel=Color3.fromRGB(28,34,48),header=Color3.fromRGB(20,26,38),accent=Color3.fromRGB(0,140,255),text=Color3.fromRGB(235,240,250),sub=Color3.fromRGB(150,165,190),off=Color3.fromRGB(50,60,80)},
+    ["Gold"]={bg=Color3.fromRGB(240,240,244),panel=Color3.fromRGB(255,255,255),header=Color3.fromRGB(252,252,255),accent=Color3.fromRGB(200,160,40),text=Color3.fromRGB(30,30,35),sub=Color3.fromRGB(120,120,130),off=Color3.fromRGB(210,210,220)},
+    ["Purple"]={bg=Color3.fromRGB(16,12,24),panel=Color3.fromRGB(30,22,44),header=Color3.fromRGB(22,16,34),accent=Color3.fromRGB(150,70,255),text=Color3.fromRGB(240,235,255),sub=Color3.fromRGB(160,150,195),off=Color3.fromRGB(58,46,80)},
 }
-local CurrentTheme = Themes["Blue/Black"]
-local ThemeTargets = {}
-local ToggleRegistry = {}
-local function link(o,p,r) ThemeTargets[#ThemeTargets+1]={obj=o,prop=p,role=r} return o end
-local function ApplyTheme(n)
-    local t=Themes[n] if not t then return end
-    CurrentTheme=t
-    for _,e in ipairs(ThemeTargets) do pcall(function() e.obj[e.prop]=t[e.role] end) end
-    for _,tog in ipairs(ToggleRegistry) do tog.pill.BackgroundColor3=tog.isOn() and t.accent or t.toggleOff end
+local T = Themes["Blue"]
+local Links = {}
+local function link(o,p,r) Links[#Links+1]={o=o,p=p,r=r} end
+local function applyTheme(n)
+    T = Themes[n]
+    for _,e in ipairs(Links) do pcall(function() e.o[e.p]=T[e.r] end) end
 end
 
---==================== HELPERS ====================--
-local function corner(o,r)
-    local c=Instance.new("UICorner") c.CornerRadius=UDim.new(0,r) c.Parent=o return c
+local function corner(o,r) local c=Instance.new("UICorner") c.CornerRadius=UDim.new(0,r) c.Parent=o return c end
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name="XdrgHub" screenGui.ResetOnSpawn=false screenGui.IgnoreGuiInset=true
+screenGui.ZIndexBehavior=Enum.ZIndexBehavior.Sibling screenGui.Parent=Parent
+
+--========= NOTIFY =========--
+local function notify(txt)
+    local n = Instance.new("TextLabel")
+    n.Size=UDim2.new(0.7,0,0,28) n.Position=UDim2.new(0.15,0,0.9,0)
+    n.BackgroundColor3=T.panel n.BackgroundTransparency=0.1 n.Text=txt
+    n.Font=Enum.Font.GothamBold n.TextSize=11 n.TextColor3=T.accent n.BorderSizePixel=0 n.Parent=screenGui
+    corner(n,6)
+    task.delay(2, function() n:Destroy() end)
 end
 
-local screenGui
-local function notify(text)
-    if not screenGui then return end
-    local n=Instance.new("TextLabel")
-    n.Size=UDim2.fromOffset(380,38) n.Position=UDim2.new(0.5,-190,1,-120)
-    n.BackgroundColor3=CurrentTheme.panel n.BackgroundTransparency=1 n.TextTransparency=1
-    n.Text=text n.Font=Enum.Font.GothamMedium n.TextSize=13 n.TextColor3=CurrentTheme.accent
-    n.BorderSizePixel=0 n.Parent=screenGui
-    corner(n,10)
-    local s=Instance.new("UIStroke") s.Color=CurrentTheme.accent s.Transparency=1 s.Parent=n
-    TweenService:Create(n,TweenInfo.new(0.2),{BackgroundTransparency=0.1,TextTransparency=0}):Play()
-    TweenService:Create(s,TweenInfo.new(0.2),{Transparency=0.4}):Play()
-    task.delay(2.5,function()
-        TweenService:Create(n,TweenInfo.new(0.3),{BackgroundTransparency=1,TextTransparency=1}):Play()
-        TweenService:Create(s,TweenInfo.new(0.3),{Transparency=1}):Play()
-        task.wait(0.35) n:Destroy()
-    end)
-end
-
--- ===== FIXED DRAG FUNCTION =====
--- Uses frame.InputBegan for click detection (GUI-local),
--- UserInputService for global tracking (works even off-frame).
+--========= DRAG (mobile-friendly) =========--
 local function makeDraggable(frame, onClick)
-    local dragging = false
-    local moved    = false
-    local dragStart, startPos
-
+    local drag, moved, start, startPos = false, false
     frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            moved    = false
-            dragStart = Vector2.new(input.Position.X, input.Position.Y)
-            startPos  = frame.Position
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            drag=true moved=false start=input.Position startPos=frame.Position
         end
     end)
-
     UIS.InputChanged:Connect(function(input)
-        if not dragging then return end
-        if input.UserInputType == Enum.UserInputType.MouseMovement
-        or input.UserInputType == Enum.UserInputType.Touch then
-            local cur = Vector2.new(input.Position.X, input.Position.Y)
-            local delta = cur - dragStart
-            if math.abs(delta.X) > 4 or math.abs(delta.Y) > 4 then
-                moved = true
-            end
-            frame.Position = UDim2.new(
-                startPos.X.Scale, startPos.X.Offset + delta.X,
-                startPos.Y.Scale, startPos.Y.Offset + delta.Y
-            )
+        if not drag then return end
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            local d = input.Position - start
+            if math.abs(d.X)>5 or math.abs(d.Y)>5 then moved=true end
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset+d.X, startPos.Y.Scale, startPos.Y.Offset+d.Y)
         end
     end)
-
     UIS.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-            if dragging and not moved and onClick then
-                onClick()
-            end
-            dragging = false
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            if drag and not moved and onClick then onClick() end
+            drag=false
         end
     end)
 end
 
--- ===== RESIZE FUNCTION =====
-local function makeResizable(handle, targetFrame, minSize)
-    minSize = minSize or Vector2.new(420, 400)
-    local resizing = false
-    local resizeStart, startSize
-
-    handle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-            resizing = true
-            resizeStart = Vector2.new(input.Position.X, input.Position.Y)
-            startSize = targetFrame.AbsoluteSize
-        end
-    end)
-
-    UIS.InputChanged:Connect(function(input)
-        if not resizing then return end
-        if input.UserInputType == Enum.UserInputType.MouseMovement
-        or input.UserInputType == Enum.UserInputType.Touch then
-            local cur = Vector2.new(input.Position.X, input.Position.Y)
-            local delta = cur - resizeStart
-            local newW = math.max(minSize.X, startSize.X + delta.X)
-            local newH = math.max(minSize.Y, startSize.Y + delta.Y)
-            targetFrame.Size = UDim2.fromOffset(newW, newH)
-        end
-    end)
-
-    UIS.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-            resizing = false
-        end
-    end)
-end
-
---==================== SCREEN GUI ====================--
-screenGui = Instance.new("ScreenGui")
-screenGui.Name = "XdrgHub"
-screenGui.ResetOnSpawn = false
-screenGui.IgnoreGuiInset = true
-screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-screenGui.Parent = Parent
-
---==================== CIRCLE BUTTON ====================--
+--========= CIRCLE BUTTON (small) =========--
 local circle = Instance.new("TextButton")
-circle.Size = UDim2.fromOffset(56, 56)
-circle.Position = UDim2.new(0, 30, 0.5, -28)
-circle.BackgroundColor3 = CurrentTheme.accent
-circle.BorderSizePixel = 0
-circle.Text = "X"
-circle.Font = Enum.Font.GothamBlack
-circle.TextSize = 24
-circle.TextColor3 = Color3.fromRGB(255, 255, 255)
-circle.AutoButtonColor = false
-circle.Parent = screenGui
-corner(circle, 999)
-link(circle, "BackgroundColor3", "accent")
+circle.Size=UDim2.fromOffset(42,42) circle.Position=UDim2.new(0,12,0.5,-21)
+circle.BackgroundColor3=T.accent circle.Text="X" circle.Font=Enum.Font.GothamBlack
+circle.TextSize=18 circle.TextColor3=Color3.new(1,1,1) circle.AutoButtonColor=false
+circle.BorderSizePixel=0 circle.Parent=screenGui
+corner(circle,999) link(circle,"BackgroundColor3","accent")
 
-local circleStroke = Instance.new("UIStroke")
-circleStroke.Thickness = 2
-circleStroke.Color = CurrentTheme.accent2
-circleStroke.Parent = circle
-link(circleStroke, "Color", "accent2")
-
---==================== MAIN WINDOW ====================--
+--========= MAIN WINDOW (compact for phone) =========--
 local main = Instance.new("Frame")
-main.Size = UDim2.fromOffset(520, 600)
-main.Position = UDim2.new(0.5, -260, 0.5, -300)
-main.BackgroundColor3 = CurrentTheme.bg
-main.BorderSizePixel = 0
-main.Visible = false
-main.Parent = screenGui
-corner(main, 14)
-link(main, "BackgroundColor3", "bg")
+main.Size=UDim2.fromOffset(300,400)
+main.Position=UDim2.new(0.5,-150,0.5,-200)
+main.BackgroundColor3=T.bg main.BorderSizePixel=0 main.Visible=false main.Parent=screenGui
+corner(main,10) link(main,"BackgroundColor3","bg")
+local mainStroke=Instance.new("UIStroke") mainStroke.Thickness=1 mainStroke.Transparency=0.2 mainStroke.Color=T.accent mainStroke.Parent=main
+link(mainStroke,"Color","accent")
 
-local mainStroke = Instance.new("UIStroke")
-mainStroke.Thickness = 1.5
-mainStroke.Transparency = 0.3
-mainStroke.Color = CurrentTheme.accent
-mainStroke.Parent = main
-link(mainStroke, "Color", "accent")
-
--- Header (drag handle)
+-- Header (drag)
 local header = Instance.new("Frame")
-header.Size = UDim2.new(1, 0, 0, 52)
-header.BackgroundColor3 = CurrentTheme.header
-header.BorderSizePixel = 0
-header.Parent = main
-corner(header, 14)
-link(header, "BackgroundColor3", "header")
-
-local headerFill = Instance.new("Frame")
-headerFill.Size = UDim2.new(1, 0, 0, 16)
-headerFill.Position = UDim2.new(0, 0, 1, -14)
-headerFill.BackgroundColor3 = CurrentTheme.header
-headerFill.BorderSizePixel = 0
-headerFill.Parent = header
-link(headerFill, "BackgroundColor3", "header")
+header.Size=UDim2.new(1,0,0,38) header.BackgroundColor3=T.header header.BorderSizePixel=0 header.Parent=main
+corner(header,10) link(header,"BackgroundColor3","header")
+local headerFill=Instance.new("Frame") headerFill.Size=UDim2.new(1,0,0,12) headerFill.Position=UDim2.new(0,0,1,-10)
+headerFill.BackgroundColor3=T.header headerFill.BorderSizePixel=0 headerFill.Parent=header
+link(headerFill,"BackgroundColor3","header")
 
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Text = "Xdrg Hub"
-titleLabel.Font = Enum.Font.GothamBold
-titleLabel.TextSize = 20
-titleLabel.TextColor3 = CurrentTheme.accent
-titleLabel.BackgroundTransparency = 1
-titleLabel.Position = UDim2.new(0, 16, 0, 7)
-titleLabel.Size = UDim2.new(1, -80, 0, 22)
-titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-titleLabel.Parent = header
-link(titleLabel, "TextColor3", "accent")
+titleLabel.Text="Xdrg Hub" titleLabel.Font=Enum.Font.GothamBold titleLabel.TextSize=14
+titleLabel.TextColor3=T.accent titleLabel.BackgroundTransparency=1
+titleLabel.Position=UDim2.new(0,10,0,4) titleLabel.Size=UDim2.new(1,-50,0,18)
+titleLabel.TextXAlignment=Enum.TextXAlignment.Left titleLabel.Parent=header
+link(titleLabel,"TextColor3","accent")
 
 local subLabel = Instance.new("TextLabel")
-subLabel.Text = "Steal An Egg  •  v6.0  •  Drag + Resize"
-subLabel.Font = Enum.Font.Gotham
-subLabel.TextSize = 11
-subLabel.TextColor3 = CurrentTheme.subtext
-subLabel.BackgroundTransparency = 1
-subLabel.Position = UDim2.new(0, 17, 0, 28)
-subLabel.Size = UDim2.new(1, -80, 0, 14)
-subLabel.TextXAlignment = Enum.TextXAlignment.Left
-subLabel.Parent = header
-link(subLabel, "TextColor3", "subtext")
+subLabel.Text="v7.0 mobile" subLabel.Font=Enum.Font.Gotham titleLabel.TextSize
+subLabel.TextSize=9 subLabel.TextColor3=T.sub subLabel.BackgroundTransparency=1
+subLabel.Position=UDim2.new(0,10,0,21) subLabel.Size=UDim2.new(1,-50,0,12)
+subLabel.TextXAlignment=Enum.TextXAlignment.Left subLabel.Parent=header
+link(subLabel,"TextColor3","sub")
 
 local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.fromOffset(28, 28)
-closeBtn.Position = UDim2.new(1, -38, 0.5, -14)
-closeBtn.BackgroundColor3 = CurrentTheme.panel
-closeBtn.Text = "✕"
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.TextSize = 14
-closeBtn.TextColor3 = CurrentTheme.text
-closeBtn.AutoButtonColor = false
-closeBtn.BorderSizePixel = 0
-closeBtn.Parent = header
-corner(closeBtn, 8)
-link(closeBtn, "BackgroundColor3", "panel")
-link(closeBtn, "TextColor3", "text")
+closeBtn.Size=UDim2.fromOffset(22,22) closeBtn.Position=UDim2.new(1,-28,0.5,-11)
+closeBtn.BackgroundColor3=T.panel closeBtn.Text="✕" closeBtn.Font=Enum.Font.GothamBold
+closeBtn.TextSize=12 closeBtn.TextColor3=T.text closeBtn.AutoButtonColor=false
+closeBtn.BorderSizePixel=0 closeBtn.Parent=header
+corner(closeBtn,6) link(closeBtn,"BackgroundColor3","panel") link(closeBtn,"TextColor3","text")
 
--- Transparent drag overlay on header (so titleLabel/closeBtn don't block drag)
+-- Invisible drag overlay covering header area (so title doesn't block)
 local headerDrag = Instance.new("TextButton")
-headerDrag.Size = UDim2.new(1, -80, 1, 0)
-headerDrag.Position = UDim2.new(0, 0, 0, 0)
-headerDrag.BackgroundTransparency = 1
-headerDrag.Text = ""
-headerDrag.AutoButtonColor = false
-headerDrag.BorderSizePixel = 0
-headerDrag.ZIndex = 2
-headerDrag.Parent = header
-
--- Make headerDrag the drag handle for the main window
+headerDrag.Size=UDim2.new(1,-60,1,0) headerDrag.Position=UDim2.new(0,0,0,0)
+headerDrag.BackgroundTransparency=1 headerDrag.Text="" headerDrag.AutoButtonColor=false
+headerDrag.BorderSizePixel=0 headerDrag.ZIndex=2 headerDrag.Parent=header
 makeDraggable(headerDrag)
--- Also make the circle draggable + clickable toggle
-makeDraggable(circle, function()
-    main.Visible = not main.Visible
-end)
 
--- Resize handle (bottom-right corner)
-local resizeHandle = Instance.new("TextButton")
-resizeHandle.Size = UDim2.fromOffset(18, 18)
-resizeHandle.Position = UDim2.new(1, -22, 1, -22)
-resizeHandle.BackgroundColor3 = CurrentTheme.accent
-resizeHandle.Text = "◢"
-resizeHandle.Font = Enum.Font.GothamBold
-resizeHandle.TextSize = 12
-resizeHandle.TextColor3 = Color3.fromRGB(255, 255, 255)
-resizeHandle.AutoButtonColor = false
-resizeHandle.BorderSizePixel = 0
-resizeHandle.ZIndex = 5
-resizeHandle.Parent = main
-corner(resizeHandle, 6)
-link(resizeHandle, "BackgroundColor3", "accent")
+makeDraggable(circle, function() main.Visible = not main.Visible end)
 
-makeResizable(resizeHandle, main, Vector2.new(420, 400))
-
--- Tabs
+-- Tab bar
 local tabBar = Instance.new("Frame")
-tabBar.Size = UDim2.new(1, -20, 0, 34)
-tabBar.Position = UDim2.new(0, 10, 0, 56)
-tabBar.BackgroundColor3 = CurrentTheme.panel
-tabBar.BorderSizePixel = 0
-tabBar.Parent = main
-corner(tabBar, 8)
-link(tabBar, "BackgroundColor3", "panel")
+tabBar.Size=UDim2.new(1,-14,0,26) tabBar.Position=UDim2.new(0,7,0,42)
+tabBar.BackgroundColor3=T.panel tabBar.BorderSizePixel=0 tabBar.Parent=main
+corner(tabBar,6) link(tabBar,"BackgroundColor3","panel")
+local tabLayout=Instance.new("UIListLayout")
+tabLayout.FillDirection=Enum.FillDirection.Horizontal tabLayout.Padding=UDim.new(0,3)
+tabLayout.VerticalAlignment=Enum.VerticalAlignment.Center tabLayout.HorizontalAlignment=Enum.HorizontalAlignment.Center
+tabLayout.Parent=tabBar
 
-local tabLayout = Instance.new("UIListLayout")
-tabLayout.FillDirection = Enum.FillDirection.Horizontal
-tabLayout.Padding = UDim.new(0, 4)
-tabLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-tabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-tabLayout.Parent = tabBar
-
-local Tabs = {}
-local ActiveTab = nil
+local Tabs, ActiveTab = {}, nil
 
 local function makeTab(name)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1/4, -6, 0, 26)
-    btn.BackgroundColor3 = CurrentTheme.header
-    btn.Text = name
-    btn.Font = Enum.Font.GothamMedium
-    btn.TextSize = 12
-    btn.TextColor3 = CurrentTheme.subtext
-    btn.AutoButtonColor = false
-    btn.BorderSizePixel = 0
-    btn.Parent = tabBar
-    corner(btn, 6)
-    link(btn, "BackgroundColor3", "header")
-    link(btn, "TextColor3", "subtext")
+    btn.Size=UDim2.new(1/4,-3,0,20) btn.BackgroundColor3=T.header btn.Text=name
+    btn.Font=Enum.Font.GothamMedium btn.TextSize=10 btn.TextColor3=T.sub
+    btn.AutoButtonColor=false btn.BorderSizePixel=0 btn.Parent=tabBar
+    corner(btn,4) link(btn,"BackgroundColor3","header") link(btn,"TextColor3","sub")
 
     local page = Instance.new("ScrollingFrame")
-    page.Size = UDim2.new(1, -20, 1, -116)
-    page.Position = UDim2.new(0, 10, 0, 96)
-    page.BackgroundTransparency = 1
-    page.BorderSizePixel = 0
-    page.ScrollBarThickness = 3
-    page.ScrollBarImageColor3 = CurrentTheme.accent
-    page.CanvasSize = UDim2.new(0, 0, 0, 0)
-    page.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    page.Visible = false
-    page.Parent = main
-    link(page, "ScrollBarImageColor3", "accent")
+    page.Size=UDim2.new(1,-14,1,-78) page.Position=UDim2.new(0,7,0,72)
+    page.BackgroundTransparency=1 page.BorderSizePixel=0 page.ScrollBarThickness=2
+    page.ScrollBarImageColor3=T.accent page.CanvasSize=UDim2.new(0,0,0,0)
+    page.AutomaticCanvasSize=Enum.AutomaticSize.Y page.Visible=false page.Parent=main
+    link(page,"ScrollBarImageColor3","accent")
 
-    local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 6)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Parent = page
+    local lay=Instance.new("UIListLayout")
+    lay.Padding=UDim.new(0,4) lay.SortOrder=Enum.SortOrder.LayoutOrder lay.Parent=page
 
-    Tabs[name] = {btn = btn, page = page, layout = layout}
+    Tabs[name]={btn=btn,page=page}
 end
 
 local function activateTab(name)
     if ActiveTab then
-        Tabs[ActiveTab].btn.BackgroundColor3 = CurrentTheme.header
-        Tabs[ActiveTab].btn.TextColor3 = CurrentTheme.subtext
-        Tabs[ActiveTab].page.Visible = false
+        Tabs[ActiveTab].btn.BackgroundColor3=T.header
+        Tabs[ActiveTab].btn.TextColor3=T.sub
+        Tabs[ActiveTab].page.Visible=false
     end
-    ActiveTab = name
-    Tabs[name].btn.BackgroundColor3 = CurrentTheme.accent
-    Tabs[name].btn.TextColor3 = CurrentTheme.bg
-    Tabs[name].page.Visible = true
+    ActiveTab=name
+    Tabs[name].btn.BackgroundColor3=T.accent
+    Tabs[name].btn.TextColor3=T.bg
+    Tabs[name].page.Visible=true
 end
 
-makeTab("Features")
-makeTab("Egg Select")
-makeTab("Title")
-makeTab("Theme")
-
-for name, data in pairs(Tabs) do
-    data.btn.MouseButton1Click:Connect(function() activateTab(name) end)
-end
+makeTab("Main"); makeTab("Eggs"); makeTab("Title"); makeTab("Theme")
+for name,data in pairs(Tabs) do data.btn.MouseButton1Click:Connect(function() activateTab(name) end) end
 
 -- Builders
-local orderCounter = 0
-local function nextOrder() orderCounter = orderCounter + 1 return orderCounter end
+local order = 0
+local function nextOrder() order=order+1 return order end
 
-local function makeSection(parentFrame, text)
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, 0, 0, 20)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = text
-    lbl.Font = Enum.Font.GothamBold
-    lbl.TextSize = 12
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.TextColor3 = CurrentTheme.accent
-    lbl.LayoutOrder = nextOrder()
-    lbl.Parent = parentFrame
-    link(lbl, "TextColor3", "accent")
+local function makeSection(parentFrame, txt)
+    local l = Instance.new("TextLabel")
+    l.Size=UDim2.new(1,0,0,16) l.BackgroundTransparency=1 l.Text=txt
+    l.Font=Enum.Font.GothamBold l.TextSize=10 l.TextXAlignment=Enum.TextXAlignment.Left
+    l.TextColor3=T.accent l.LayoutOrder=nextOrder() l.Parent=parentFrame
+    link(l,"TextColor3","accent")
 end
 
-local function makeToggle(parentFrame, text, callback)
+local function makeToggle(parentFrame, txt, callback)
     local row = Instance.new("TextButton")
-    row.Size = UDim2.new(1, 0, 0, 42)
-    row.BackgroundColor3 = CurrentTheme.panel
-    row.AutoButtonColor = false
-    row.Text = ""
-    row.BorderSizePixel = 0
-    row.LayoutOrder = nextOrder()
-    row.Parent = parentFrame
-    corner(row, 10)
-    link(row, "BackgroundColor3", "panel")
+    row.Size=UDim2.new(1,0,0,32) row.BackgroundColor3=T.panel row.AutoButtonColor=false
+    row.Text="" row.BorderSizePixel=0 row.LayoutOrder=nextOrder() row.Parent=parentFrame
+    corner(row,6) link(row,"BackgroundColor3","panel")
 
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -80, 1, 0)
-    label.Position = UDim2.new(0, 14, 0, 0)
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.Font = Enum.Font.GothamMedium
-    label.TextSize = 14
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = row
-    link(label, "TextColor3", "text")
+    local lbl = Instance.new("TextLabel")
+    lbl.Size=UDim2.new(1,-60,1,0) lbl.Position=UDim2.new(0,8,0,0) lbl.BackgroundTransparency=1
+    lbl.Text=txt lbl.Font=Enum.Font.GothamMedium lbl.TextSize=11
+    lbl.TextXAlignment=Enum.TextXAlignment.Left lbl.Parent=row
+    link(lbl,"TextColor3","text")
 
     local pill = Instance.new("Frame")
-    pill.Size = UDim2.fromOffset(46, 24)
-    pill.Position = UDim2.new(1, -60, 0.5, -12)
-    pill.BackgroundColor3 = CurrentTheme.toggleOff
-    pill.BorderSizePixel = 0
-    pill.Parent = row
-    corner(pill, 12)
+    pill.Size=UDim2.fromOffset(36,18) pill.Position=UDim2.new(1,-44,0.5,-9)
+    pill.BackgroundColor3=T.off pill.BorderSizePixel=0 pill.Parent=row
+    corner(pill,9)
 
     local knob = Instance.new("Frame")
-    knob.Size = UDim2.fromOffset(18, 18)
-    knob.Position = UDim2.new(0, 3, 0.5, -9)
-    knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    knob.BorderSizePixel = 0
-    knob.Parent = pill
-    corner(knob, 9)
+    knob.Size=UDim2.fromOffset(14,14) knob.Position=UDim2.new(0,2,0.5,-7)
+    knob.BackgroundColor3=Color3.new(1,1,1) knob.BorderSizePixel=0 knob.Parent=pill
+    corner(knob,7)
 
-    local state = false
+    local state=false
     local function setState(v)
-        state = v
-        TweenService:Create(pill, TweenInfo.new(0.18), {BackgroundColor3 = v and CurrentTheme.accent or CurrentTheme.toggleOff}):Play()
-        TweenService:Create(knob, TweenInfo.new(0.18), {Position = v and UDim2.new(1, -21, 0.5, -9) or UDim2.new(0, 3, 0.5, -9)}):Play()
+        state=v
+        TweenService:Create(pill,TweenInfo.new(0.15),{BackgroundColor3=v and T.accent or T.off}):Play()
+        TweenService:Create(knob,TweenInfo.new(0.15),{Position=v and UDim2.new(1,-16,0.5,-7) or UDim2.new(0,2,0.5,-7)}):Play()
         callback(v)
     end
-
     row.MouseButton1Click:Connect(function() setState(not state) end)
-    ToggleRegistry[#ToggleRegistry+1] = {pill = pill, isOn = function() return state end}
 end
 
---==================== FLAGS ====================--
-local Flags = {NoKnockback=false, AntiRagdoll=false, AntiFling=false, AntiGuard=false, AutoSteal=false}
-local SelectedEggs = {}
-local CustomBasePos = nil
-local function getSelectedCount() local c=0 for _ in pairs(SelectedEggs) do c=c+1 end return c end
+--========= FLAGS =========--
+local Flags = {NoKB=false, AntiRag=false, AntiFling=false, AntiGuard=false, AutoSteal=false}
+local Selected = {}
+local BasePos = nil
+local function selCount() local c=0 for _ in pairs(Selected) do c=c+1 end return c end
 
---==================== CORE: EGG FINDER ====================--
-local function getHRP()
-    local char=LP.Character
-    if not char then return nil end
-    return char:FindFirstChild("HumanoidRootPart")
-end
-
-local function getEggPosition(egg)
-    if egg:IsA("Model") then
-        if egg.PrimaryPart then return egg.PrimaryPart.Position end
-        local p = egg:FindFirstChildWhichIsA("BasePart")
-        if p then return p.Position end
-    elseif egg:IsA("BasePart") then
-        return egg.Position
-    end
+--========= CORE =========--
+local function hrp() local c=LP.Character if not c then return nil end return c:FindFirstChild("HumanoidRootPart") end
+local function eggPos(e)
+    if e:IsA("Model") then
+        if e.PrimaryPart then return e.PrimaryPart.Position end
+        local p=e:FindFirstChildWhichIsA("BasePart") if p then return p.Position end
+    elseif e:IsA("BasePart") then return e.Position end
     return nil
 end
-
-local function findCarryPrompt(egg)
-    for _,d in ipairs(egg:GetDescendants()) do
-        if d:IsA("ProximityPrompt") and d.Name == "CarryAreaEgg" then return d end
+local function findCarryPrompt(e)
+    for _,d in ipairs(e:GetDescendants()) do
+        if d:IsA("ProximityPrompt") and d.Name=="CarryAreaEgg" then return d end
     end
-    for _,d in ipairs(egg:GetDescendants()) do
+    for _,d in ipairs(e:GetDescendants()) do
         if d:IsA("ProximityPrompt") then return d end
     end
-    if egg.Parent then
-        for _,d in ipairs(egg.Parent:GetDescendants()) do
-            if d:IsA("ProximityPrompt") and d.Name == "CarryAreaEgg" then return d end
-        end
-    end
     return nil
 end
-
-local function getAllEggs()
-    local list = {}
-    local folder = workspace:FindFirstChild("Eggs")
-    if folder then
-        for _,v in ipairs(folder:GetChildren()) do list[#list+1] = v end
-        if #list > 0 then return list end
-    end
-    for _,v in ipairs(workspace:GetDescendants()) do
-        if (v:IsA("Model") or v:IsA("BasePart")) and v.Name:lower():find("egg") then
-            list[#list+1] = v
+local function allEggs()
+    local list={}
+    local f=workspace:FindFirstChild("Eggs")
+    if f then for _,v in ipairs(f:GetChildren()) do list[#list+1]=v end end
+    if #list==0 then
+        for _,v in ipairs(workspace:GetDescendants()) do
+            if (v:IsA("Model") or v:IsA("BasePart")) and v.Name:lower():find("egg") then list[#list+1]=v end
         end
     end
     return list
 end
-
-local function isEggSelected(eggName)
-    if next(SelectedEggs) == nil then return true end
-    for sel,_ in pairs(SelectedEggs) do
-        if eggName == sel or eggName:find(sel, 1, true) or sel:find(eggName, 1, true) then
-            return true
-        end
+local function isSel(n)
+    if next(Selected)==nil then return true end
+    for s,_ in pairs(Selected) do
+        if n==s or n:find(s,1,true) or s:find(n,1,true) then return true end
     end
     return false
 end
-
-local function findFarthestSelectedEgg()
-    local hrp = getHRP() if not hrp then return nil end
-    local eggs = getAllEggs()
-    local best, bestDist = nil, -1
-    for _,egg in ipairs(eggs) do
-        if isEggSelected(egg.Name) then
-            local pos = getEggPosition(egg)
-            if pos then
-                local d = (pos - hrp.Position).Magnitude
-                if d > bestDist then bestDist = d best = egg end
+local function farthestEgg()
+    local h=hrp() if not h then return nil end
+    local best,bd=nil,-1
+    for _,e in ipairs(allEggs()) do
+        if isSel(e.Name) then
+            local p=eggPos(e)
+            if p then
+                local d=(p-h.Position).Magnitude
+                if d>bd then bd=d best=e end
             end
         end
     end
-    return best, bestDist
+    return best
 end
-
---==================== CORE: BASE FINDER ====================--
-local function findPlayerBase()
-    if CustomBasePos then return CustomBasePos end
-    local plotNames = {"Plot","Plots","Base","Bases","Pen","Pens","Farm","Farms","Island","Islands"}
-    for _,pn in ipairs(plotNames) do
-        local folder = workspace:FindFirstChild(pn)
-        if folder then
-            for _,child in ipairs(folder:GetChildren()) do
-                if child.Name:lower():find(LP.Name:lower(),1,true) or child.Name:lower():find(LP.DisplayName:lower(),1,true) then
-                    if child:IsA("BasePart") then return child.Position end
-                    if child:IsA("Model") and child.PrimaryPart then return child.PrimaryPart.Position end
-                    for _,sub in ipairs(child:GetDescendants()) do
-                        if sub:IsA("BasePart") and (sub.Name:lower():find("center") or sub.Name:lower():find("spawn") or sub.Name:lower():find("base")) then
-                            return sub.Position
-                        end
-                    end
+local function playerBase()
+    if BasePos then return BasePos end
+    for _,pn in ipairs({"Plot","Plots","Base","Bases","Pen","Pens","Farm","Farms"}) do
+        local f=workspace:FindFirstChild(pn)
+        if f then
+            for _,c in ipairs(f:GetChildren()) do
+                if c.Name:lower():find(LP.Name:lower(),1,true) or c.Name:lower():find(LP.DisplayName:lower(),1,true) then
+                    if c:IsA("BasePart") then return c.Position end
+                    if c:IsA("Model") and c.PrimaryPart then return c.PrimaryPart.Position end
                 end
             end
         end
@@ -632,479 +302,281 @@ local function findPlayerBase()
     end
     return nil
 end
-
-local function findDropPrompt()
-    local dropNames = {"DropEgg","PlaceEgg","HatchEgg","StoreEgg","DepositEgg","EggDrop","EggPlace"}
+local function dropPrompt()
     for _,d in ipairs(workspace:GetDescendants()) do
         if d:IsA("ProximityPrompt") then
-            for _,n in ipairs(dropNames) do
-                if d.Name == n then return d end
-            end
-            if d.Name:lower():find("drop") or d.Name:lower():find("place") or d.Name:lower():find("hatch") then
-                return d
-            end
+            local n=d.Name:lower()
+            if n:find("drop") or n:find("place") or n:find("hatch") or n:find("store") then return d end
         end
     end
     return nil
 end
 
---==================== CORE: FLY ====================--
-local Fly = {bv = nil, active = false, speed = 430}
-
-local function stopFly()
-    if Fly.bv then Fly.bv:Destroy() Fly.bv = nil end
-    Fly.active = false
-end
-
-local function flyToPosition(targetPos, timeout)
-    local hrp = getHRP() if not hrp then return false end
-    timeout = timeout or 15
+-- Fly
+local FlyBV = nil
+local function stopFly() if FlyBV then FlyBV:Destroy() FlyBV=nil end end
+local function flyTo(pos, timeout)
+    local h=hrp() if not h then return end
+    timeout=timeout or 15
     stopFly()
-    Fly.active = true
-
-    local bv = Instance.new("BodyVelocity")
-    bv.Name = "XdrgAutoFly"
-    bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-    bv.Velocity = Vector3.zero
-    bv.Parent = hrp
-    Fly.bv = bv
-
-    local startTime = tick()
-    while Fly.active and hrp.Parent and (tick() - startTime) < timeout do
-        local curPos = hrp.Position
-        local delta = targetPos - curPos
-        local dist = delta.Magnitude
-        if dist < 8 then
-            bv.Velocity = Vector3.zero
-            break
-        end
-        local speed = Fly.speed
-        if dist < 30 then speed = math.max(50, dist * 15) end
-        bv.Velocity = delta.Unit * speed
+    local bv=Instance.new("BodyVelocity")
+    bv.Name="XdrgAutoFly" bv.MaxForce=Vector3.new(1e5,1e5,1e5) bv.Velocity=Vector3.zero bv.Parent=h
+    FlyBV=bv
+    local t0=tick()
+    while FlyBV==bv and h.Parent and (tick()-t0)<timeout do
+        local d=pos-h.Position
+        if d.Magnitude<8 then bv.Velocity=Vector3.zero break end
+        local sp=430
+        if d.Magnitude<30 then sp=math.max(40,d.Magnitude*14) end
+        bv.Velocity=d.Unit*sp
         RunService.Heartbeat:Wait()
     end
-
     if bv then bv:Destroy() end
-    if Fly.bv == bv then Fly.bv = nil end
-    Fly.active = false
-    return true
+    if FlyBV==bv then FlyBV=nil end
 end
 
---==================== CORE: FULL CYCLE ====================--
-local AutoStealing = false
-
-local function firePrompt(prompt)
-    if not prompt then return false end
-    pcall(function()
-        prompt.HoldDuration = 0
-        prompt.Enabled = true
-        fireproximityprompt(prompt)
-    end)
-    return true
-end
-
-local function fullAutoStealCycle()
-    while AutoStealing do
-        local hrp = getHRP()
-        if not hrp then task.wait(0.5) continue end
-
-        local egg = findFarthestSelectedEgg()
-        if not egg then
-            notify("⚠️ No egg found. Pick one in Egg Select tab.")
-            task.wait(2)
-            continue
-        end
-
-        local eggPos = getEggPosition(egg)
-        if not eggPos then task.wait(0.5) continue end
-
-        flyToPosition(eggPos, 20)
-        task.wait(0.2)
-        if not AutoStealing then break end
-
-        local prompt = findCarryPrompt(egg)
-        if prompt then
-            firePrompt(prompt)
-            task.wait(0.5)
-        end
-        if not AutoStealing then break end
-
-        local basePos = findPlayerBase()
-        if basePos then
-            flyToPosition(basePos, 25)
-            task.wait(0.3)
-            if not AutoStealing then break end
-            local dropPrompt = findDropPrompt()
-            if dropPrompt then
-                firePrompt(dropPrompt)
-                task.wait(0.4)
-            end
+-- Auto Steal Cycle
+local AutoOn=false
+local function firePrompt(p) if not p then return end pcall(function() p.HoldDuration=0 p.Enabled=true fireproximityprompt(p) end) end
+local function cycle()
+    while AutoOn do
+        local h=hrp() if not h then task.wait(0.5) continue end
+        local e=farthestEgg()
+        if not e then notify("No egg found!") task.wait(2) continue end
+        local p=eggPos(e) if not p then task.wait(0.5) continue end
+        flyTo(p,20) task.wait(0.2) if not AutoOn then break end
+        local pr=findCarryPrompt(e) if pr then firePrompt(pr) task.wait(0.5) end
+        if not AutoOn then break end
+        local bp=playerBase()
+        if bp then
+            flyTo(bp,25) task.wait(0.3) if not AutoOn then break end
+            local dp=dropPrompt() if dp then firePrompt(dp) task.wait(0.4) end
         end
         task.wait(0.3)
     end
 end
+local function startAuto() if AutoOn then return end AutoOn=true task.spawn(cycle) end
+local function stopAuto() AutoOn=false stopFly() end
 
-local function startAutoSteal()
-    if AutoStealing then return end
-    AutoStealing = true
-    task.spawn(fullAutoStealCycle)
-end
-
-local function stopAutoSteal()
-    AutoStealing = false
-    stopFly()
-end
-
---==================== ANTI-HIT ====================--
+-- Anti-hit
 local function isMover(i)
     return i:IsA("BodyVelocity") or i:IsA("BodyAngularVelocity") or i:IsA("BodyThrust")
         or i:IsA("BodyForce") or i:IsA("BodyGyro") or i:IsA("VectorForce")
         or i:IsA("LinearVelocity") or i:IsA("AngularVelocity") or i:IsA("Torque")
-        or i:IsA("AlignPosition") or i:IsA("AlignOrientation")
 end
-
-local function restoreStates()
-    local char = LP.Character if not char then return end
-    local hum = char:FindFirstChildOfClass("Humanoid") if not hum then return end
+local function restore()
+    local c=LP.Character if not c then return end
+    local hum=c:FindFirstChildOfClass("Humanoid") if not hum then return end
     pcall(function()
-        hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
-        hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
-        hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, true)
+        hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown,true)
+        hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll,true)
+        hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding,true)
     end)
 end
-
-local function hookCharacter(char)
-    char.DescendantAdded:Connect(function(d)
-        if d.Name == "XdrgAutoFly" then return end
-        if (Flags.NoKnockback or Flags.AntiFling) and isMover(d) then
-            task.defer(function() if d and d.Parent then d:Destroy() end end)
-        end
+if LP.Character then
+    LP.Character.DescendantAdded:Connect(function(d)
+        if d.Name=="XdrgAutoFly" then return end
+        if (Flags.NoKB or Flags.AntiFling) and isMover(d) then task.defer(function() if d and d.Parent then d:Destroy() end end) end
     end)
 end
-
-if LP.Character then hookCharacter(LP.Character) end
-LP.CharacterAdded:Connect(hookCharacter)
-
-local function antiGuardLoop()
-    if not Flags.AntiGuard then return end
-    local hrp = getHRP() if not hrp then return end
-    for _,obj in ipairs(workspace:GetDescendants()) do
-        if obj:IsA("BasePart") then
-            local n = obj.Name:lower()
-            if n:find("guard") or n:find("hitbox") or n:find("damage") then
-                if (obj.Position - hrp.Position).Magnitude < 30 then
-                    pcall(function()
-                        obj.CanCollide = false obj.CanTouch = false obj.CanQuery = false
-                    end)
-                end
-            end
-        end
-    end
-end
+LP.CharacterAdded:Connect(function(c)
+    c.DescendantAdded:Connect(function(d)
+        if d.Name=="XdrgAutoFly" then return end
+        if (Flags.NoKB or Flags.AntiFling) and isMover(d) then task.defer(function() if d and d.Parent then d:Destroy() end end) end
+    end)
+end)
 
 RunService.Heartbeat:Connect(function()
-    if Flags.NoKnockback or Flags.AntiRagdoll or Flags.AntiFling then
-        local char = LP.Character
-        if char then
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            local hrp = char:FindFirstChild("HumanoidRootPart")
-            if (Flags.NoKnockback or Flags.AntiRagdoll) and hum then
+    if Flags.NoKB or Flags.AntiRag or Flags.AntiFling then
+        local c=LP.Character
+        if c then
+            local hum=c:FindFirstChildOfClass("Humanoid")
+            local h=c:FindFirstChild("HumanoidRootPart")
+            if (Flags.NoKB or Flags.AntiRag) and hum then
                 pcall(function()
-                    hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-                    hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-                    hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding, false)
-                    local st = hum:GetState()
-                    if st == Enum.HumanoidStateType.FallingDown or st == Enum.HumanoidStateType.Ragdoll or st == Enum.HumanoidStateType.PlatformStanding then
+                    hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown,false)
+                    hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll,false)
+                    hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding,false)
+                    local s=hum:GetState()
+                    if s==Enum.HumanoidStateType.FallingDown or s==Enum.HumanoidStateType.Ragdoll or s==Enum.HumanoidStateType.PlatformStanding then
                         hum:ChangeState(Enum.HumanoidStateType.Running)
                     end
                 end)
             end
-            if (Flags.NoKnockback or Flags.AntiFling) and hrp then
-                for _,v in ipairs(hrp:GetChildren()) do
-                    if isMover(v) and v.Name ~= "XdrgAutoFly" then v:Destroy() end
+            if (Flags.NoKB or Flags.AntiFling) and h then
+                for _,v in ipairs(h:GetChildren()) do
+                    if isMover(v) and v.Name~="XdrgAutoFly" then v:Destroy() end
                 end
             end
         end
     end
-    if Flags.AntiGuard then antiGuardLoop() end
-end)
-
---==================== BUILD UI ====================--
-local featPage = Tabs["Features"].page
-
-makeSection(featPage, "🥚 AUTO STEAL (Full Cycle)")
-makeToggle(featPage, "AUTO STEAL (Fly → Pick → Return → Drop)", function(on)
-    Flags.AutoSteal = on
-    if on then
-        if getSelectedCount() == 0 then
-            notify("⚠️ No eggs selected!")
-        else
-            startAutoSteal()
-            notify("✅ Auto Steal ON — " .. getSelectedCount() .. " egg(s)")
+    if Flags.AntiGuard then
+        local h=hrp()
+        if h then
+            for _,o in ipairs(workspace:GetDescendants()) do
+                if o:IsA("BasePart") then
+                    local n=o.Name:lower()
+                    if (n:find("guard") or n:find("hitbox") or n:find("damage")) and (o.Position-h.Position).Magnitude<30 then
+                        pcall(function() o.CanCollide=false o.CanTouch=false o.CanQuery=false end)
+                    end
+                end
+            end
         end
-    else
-        stopAutoSteal()
-        notify("Auto Steal: OFF")
     end
 end)
 
-makeSection(featPage, "⚙️ BASE SETTINGS")
+--========= BUILD MAIN TAB =========--
+local mainP = Tabs["Main"].page
+makeSection(mainP, "AUTO STEAL")
+makeToggle(mainP, "Auto Steal + Fly + Return", function(on)
+    Flags.AutoSteal=on
+    if on then
+        if selCount()==0 then notify("Walang egg selected!") else startAuto() notify("Auto ON - "..selCount().." eggs") end
+    else stopAuto() notify("Auto OFF") end
+end)
 
 local setBaseBtn = Instance.new("TextButton")
-setBaseBtn.Size = UDim2.new(1, 0, 0, 38)
-setBaseBtn.BackgroundColor3 = CurrentTheme.panel
-setBaseBtn.Text = "📍 Set Base (Stand on your Base)"
-setBaseBtn.Font = Enum.Font.GothamMedium
-setBaseBtn.TextSize = 13
-setBaseBtn.TextColor3 = CurrentTheme.text
-setBaseBtn.AutoButtonColor = false
-setBaseBtn.BorderSizePixel = 0
-setBaseBtn.LayoutOrder = nextOrder()
-setBaseBtn.Parent = featPage
-corner(setBaseBtn, 8)
-link(setBaseBtn, "BackgroundColor3", "panel")
-link(setBaseBtn, "TextColor3", "text")
+setBaseBtn.Size=UDim2.new(1,0,0,28) setBaseBtn.BackgroundColor3=T.panel
+setBaseBtn.Text="📍 Set Base (tumayo sa base mo)" setBaseBtn.Font=Enum.Font.GothamMedium
+setBaseBtn.TextSize=11 setBaseBtn.TextColor3=T.text setBaseBtn.AutoButtonColor=false
+setBaseBtn.BorderSizePixel=0 setBaseBtn.LayoutOrder=nextOrder() setBaseBtn.Parent=mainP
+corner(setBaseBtn,6) link(setBaseBtn,"BackgroundColor3","panel") link(setBaseBtn,"TextColor3","text")
 setBaseBtn.MouseButton1Click:Connect(function()
-    local hrp = getHRP()
-    if hrp then
-        CustomBasePos = hrp.Position
-        notify("✅ Base set to current position")
-    else
-        notify("⚠️ No character")
-    end
+    local h=hrp()
+    if h then BasePos=h.Position notify("Base set!") else notify("Walang char") end
 end)
 
-local resetBaseBtn = Instance.new("TextButton")
-resetBaseBtn.Size = UDim2.new(1, 0, 0, 32)
-resetBaseBtn.BackgroundColor3 = CurrentTheme.panel
-resetBaseBtn.Text = "🔄 Reset Base (Auto-detect)"
-resetBaseBtn.Font = Enum.Font.GothamMedium
-resetBaseBtn.TextSize = 12
-resetBaseBtn.TextColor3 = CurrentTheme.text
-resetBaseBtn.AutoButtonColor = false
-resetBaseBtn.BorderSizePixel = 0
-resetBaseBtn.LayoutOrder = nextOrder()
-resetBaseBtn.Parent = featPage
-corner(resetBaseBtn, 8)
-link(resetBaseBtn, "BackgroundColor3", "panel")
-link(resetBaseBtn, "TextColor3", "text")
-resetBaseBtn.MouseButton1Click:Connect(function()
-    CustomBasePos = nil
-    notify("Base reset — auto-detect on")
-end)
+local resetBtn = Instance.new("TextButton")
+resetBtn.Size=UDim2.new(1,0,0,26) resetBtn.BackgroundColor3=T.panel
+resetBtn.Text="🔄 Reset Base" resetBtn.Font=Enum.Font.GothamMedium
+resetBtn.TextSize=10 resetBtn.TextColor3=T.text resetBtn.AutoButtonColor=false
+resetBtn.BorderSizePixel=0 resetBtn.LayoutOrder=nextOrder() resetBtn.Parent=mainP
+corner(resetBtn,6) link(resetBtn,"BackgroundColor3","panel") link(resetBtn,"TextColor3","text")
+resetBtn.MouseButton1Click:Connect(function() BasePos=nil notify("Base reset") end)
 
-makeSection(featPage, "🛡️ ANTI-HIT")
-makeToggle(featPage, "No Knockback", function(on)
-    Flags.NoKnockback = on
-    if not on and not Flags.AntiRagdoll then restoreStates() end
-    notify(on and "No Knockback: ON" or "No Knockback: OFF")
+makeSection(mainP, "ANTI-HIT")
+makeToggle(mainP, "No Knockback", function(v)
+    Flags.NoKB=v if not v and not Flags.AntiRag then restore() end notify(v and "NoKB ON" or "NoKB OFF")
 end)
-makeToggle(featPage, "Anti Ragdoll", function(on)
-    Flags.AntiRagdoll = on
-    if not on and not Flags.NoKnockback then restoreStates() end
-    notify(on and "Anti Ragdoll: ON" or "Anti Ragdoll: OFF")
+makeToggle(mainP, "Anti Ragdoll", function(v)
+    Flags.AntiRag=v if not v and not Flags.NoKB then restore() end notify(v and "AntiRag ON" or "AntiRag OFF")
 end)
-makeToggle(featPage, "Anti Fling", function(on)
-    Flags.AntiFling = on
-    notify(on and "Anti Fling: ON" or "Anti Fling: OFF")
-end)
-makeToggle(featPage, "Anti Guard Hit", function(on)
-    Flags.AntiGuard = on
-    notify(on and "Anti Guard Hit: ON" or "Anti Guard Hit: OFF")
-end)
+makeToggle(mainP, "Anti Fling", function(v) Flags.AntiFling=v notify(v and "AntiFling ON" or "OFF") end)
+makeToggle(mainP, "Anti Guard Hit", function(v) Flags.AntiGuard=v notify(v and "AntiGuard ON" or "OFF") end)
 
--- EGG SELECT TAB
-local eggPage = Tabs["Egg Select"].page
+--========= EGG TAB =========--
+local eggP = Tabs["Eggs"].page
 
-local eggInfo = Instance.new("TextLabel")
-eggInfo.Size = UDim2.new(1, 0, 0, 44)
-eggInfo.BackgroundTransparency = 1
-eggInfo.Text = "Select eggs to auto steal. Priority: FARTHEST area.\nAuto Steal: Fly → Pick → Return → Drop."
-eggInfo.Font = Enum.Font.Gotham
-eggInfo.TextSize = 11
-eggInfo.TextColor3 = CurrentTheme.subtext
-eggInfo.TextWrapped = true
-eggInfo.TextXAlignment = Enum.TextXAlignment.Left
-eggInfo.LayoutOrder = nextOrder()
-eggInfo.Parent = eggPage
-link(eggInfo, "TextColor3", "subtext")
+local quick = Instance.new("Frame")
+quick.Size=UDim2.new(1,0,0,24) quick.BackgroundTransparency=1 quick.LayoutOrder=nextOrder() quick.Parent=eggP
+local ql=Instance.new("UIListLayout") ql.FillDirection=Enum.FillDirection.Horizontal ql.Padding=UDim.new(0,4) ql.Parent=quick
 
-local quickFrame = Instance.new("Frame")
-quickFrame.Size = UDim2.new(1, 0, 0, 32)
-quickFrame.BackgroundTransparency = 1
-quickFrame.LayoutOrder = nextOrder()
-quickFrame.Parent = eggPage
-local ql = Instance.new("UIListLayout")
-ql.FillDirection = Enum.FillDirection.Horizontal
-ql.Padding = UDim.new(0, 6)
-ql.Parent = quickFrame
-
-local eggButtons = {}
-local function refreshAllButtons()
-    for name,data in pairs(eggButtons) do
-        if SelectedEggs[name] then
-            data.btn.BackgroundColor3 = CurrentTheme.selected
-            data.stroke.Transparency = 0
-        else
-            data.btn.BackgroundColor3 = CurrentTheme.panel
-            data.stroke.Transparency = 1
-        end
+local eggBtns={}
+local function refreshAll()
+    for n,d in pairs(eggBtns) do
+        d.btn.BackgroundColor3 = Selected[n] and T.accent or T.panel
     end
 end
 
-local function makeQuickBtn(text, cb)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.33, -4, 1, 0)
-    btn.BackgroundColor3 = CurrentTheme.panel
-    btn.Text = text
-    btn.Font = Enum.Font.GothamMedium
-    btn.TextSize = 11
-    btn.TextColor3 = CurrentTheme.text
-    btn.AutoButtonColor = false
-    btn.BorderSizePixel = 0
-    btn.Parent = quickFrame
-    corner(btn, 6)
-    link(btn, "BackgroundColor3", "panel")
-    link(btn, "TextColor3", "text")
-    btn.MouseButton1Click:Connect(cb)
+local function makeQBtn(txt, cb)
+    local b=Instance.new("TextButton")
+    b.Size=UDim2.new(0.33,-3,1,0) b.BackgroundColor3=T.panel b.Text=txt
+    b.Font=Enum.Font.GothamMedium b.TextSize=9 b.TextColor3=T.text
+    b.AutoButtonColor=false b.BorderSizePixel=0 b.Parent=quick
+    corner(b,4) link(b,"BackgroundColor3","panel") link(b,"TextColor3","text")
+    b.MouseButton1Click:Connect(cb)
 end
-
-makeQuickBtn("Clear All", function()
-    for k in pairs(SelectedEggs) do SelectedEggs[k] = nil end
-    refreshAllButtons() notify("Cleared")
+makeQBtn("Clear", function() for k in pairs(Selected) do Selected[k]=nil end refreshAll() end)
+makeQBtn("All", function()
+    for _,bi in ipairs(BiomeData) do for _,e in ipairs(bi.eggs) do Selected[e.." Egg"]=true end end
+    refreshAll()
 end)
-makeQuickBtn("Select All", function()
-    for _,b in ipairs(BiomeData) do
-        for _,e in ipairs(b.eggs) do SelectedEggs[e.name] = true end
-    end
-    refreshAllButtons() notify("Selected all")
-end)
-makeQuickBtn("High Rarity+", function()
-    local hr = {Secret=true, Eternal=true, Divine=true, Cosmic=true}
-    for _,b in ipairs(BiomeData) do
-        for _,e in ipairs(b.eggs) do
-            if hr[e.rarity] then SelectedEggs[e.name] = true end
-        end
-    end
-    refreshAllButtons() notify("Cosmic+ selected")
+makeQBtn("Rare+", function()
+    for _,bi in ipairs(BiomeData) do for i,e in ipairs(bi.eggs) do if i>=5 then Selected[e.." Egg"]=true end end end
+    refreshAll()
 end)
 
-for _,biome in ipairs(BiomeData) do
-    local bh = Instance.new("TextLabel")
-    bh.Size = UDim2.new(1, 0, 0, 22)
-    bh.BackgroundTransparency = 1
-    bh.Text = biome.name .. "  (" .. biome.speedReq .. " Speed)"
-    bh.Font = Enum.Font.GothamBold
-    bh.TextSize = 12
-    bh.TextXAlignment = Enum.TextXAlignment.Left
-    bh.TextColor3 = CurrentTheme.accent
-    bh.LayoutOrder = nextOrder()
-    bh.Parent = eggPage
-    link(bh, "TextColor3", "accent")
+for _,bi in ipairs(BiomeData) do
+    local hd = Instance.new("TextLabel")
+    hd.Size=UDim2.new(1,0,0,14) hd.BackgroundTransparency=1 hd.Text=bi.name
+    hd.Font=Enum.Font.GothamBold hd.TextSize=10 hd.TextXAlignment=Enum.TextXAlignment.Left
+    hd.TextColor3=T.accent hd.LayoutOrder=nextOrder() hd.Parent=eggP
+    link(hd,"TextColor3","accent")
 
-    local grid = Instance.new("Frame")
-    grid.Size = UDim2.new(1, 0, 0, math.ceil(#biome.eggs/2)*38 + 10)
-    grid.BackgroundTransparency = 1
-    grid.LayoutOrder = nextOrder()
-    grid.Parent = eggPage
-    local gl = Instance.new("UIGridLayout")
-    gl.CellSize = UDim2.new(0.5, -4, 0, 34)
-    gl.CellPadding = UDim.new(0, 8, 0, 4)
-    gl.SortOrder = Enum.SortOrder.LayoutOrder
-    gl.Parent = grid
+    local g = Instance.new("Frame")
+    g.Size=UDim2.new(1,0,0,math.ceil(#bi.eggs/2)*22+6) g.BackgroundTransparency=1
+    g.LayoutOrder=nextOrder() g.Parent=eggP
+    local gl=Instance.new("UIGridLayout")
+    gl.CellSize=UDim2.new(0.5,-2,0,20) gl.CellPadding=UDim.new(0,4,0,2)
+    gl.SortOrder=Enum.SortOrder.LayoutOrder gl.Parent=g
 
-    for _,egg in ipairs(biome.eggs) do
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(0.5, -4, 0, 34)
-        btn.BackgroundColor3 = CurrentTheme.panel
-        btn.Text = egg.name:gsub(" Egg","") .. "  [" .. egg.rarity .. "]"
-        btn.Font = Enum.Font.Gotham
-        btn.TextSize = 10
-        btn.TextColor3 = CurrentTheme.text
-        btn.AutoButtonColor = false
-        btn.BorderSizePixel = 0
-        btn.TextTruncate = Enum.TextTruncate.AtEnd
-        btn.Parent = grid
-        corner(btn, 6)
-        link(btn, "BackgroundColor3", "panel")
-        link(btn, "TextColor3", "text")
-
-        local stroke = Instance.new("UIStroke")
-        stroke.Color = RarityColors[egg.rarity] or CurrentTheme.accent
-        stroke.Thickness = 1.5
-        stroke.Transparency = 1
-        stroke.Parent = btn
-
-        local dot = Instance.new("Frame")
-        dot.Size = UDim2.fromOffset(6, 6)
-        dot.Position = UDim2.new(1, -14, 0, 6)
-        dot.BackgroundColor3 = RarityColors[egg.rarity] or Color3.new(1,1,1)
-        dot.BorderSizePixel = 0
-        dot.Parent = btn
-        corner(dot, 3)
-
-        eggButtons[egg.name] = {btn = btn, stroke = stroke}
-
-        btn.MouseButton1Click:Connect(function()
-            if SelectedEggs[egg.name] then SelectedEggs[egg.name] = nil
-            else SelectedEggs[egg.name] = true end
-            refreshAllButtons()
-            notify(egg.name .. " — " .. (SelectedEggs[egg.name] and "SELECTED" or "REMOVED"))
+    for _,en in ipairs(bi.eggs) do
+        local full=en.." Egg"
+        local b=Instance.new("TextButton")
+        b.Size=UDim2.new(0.5,-2,0,20) b.BackgroundColor3=T.panel
+        b.Text=en b.Font=Enum.Font.Gotham b.TextSize=9 b.TextColor3=T.text
+        b.AutoButtonColor=false b.BorderSizePixel=0 b.TextTruncate=Enum.TextTruncate.AtEnd
+        b.Parent=g corner(b,4) link(b,"BackgroundColor3","panel") link(b,"TextColor3","text")
+        eggBtns[full]={btn=b}
+        b.MouseButton1Click:Connect(function()
+            if Selected[full] then Selected[full]=nil else Selected[full]=true end
+            refreshAll()
+            notify(en.." "..(Selected[full] and "ON" or "OFF"))
         end)
     end
 end
 
--- TITLE TAB
-local titlePage = Tabs["Title"].page
-makeSection(titlePage, "📝 UI TITLE")
+--========= TITLE TAB =========--
+local titleP = Tabs["Title"].page
+makeSection(titleP, "UI TITLE")
 for _,txt in ipairs({"Xdrg Hub","Xdragon Hub","Si Cloude ay Pangit","Si Summere ay Pangit"}) do
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 38)
-    btn.BackgroundColor3 = CurrentTheme.panel
-    btn.Text = txt
-    btn.Font = Enum.Font.GothamMedium
-    btn.TextSize = 14
-    btn.TextColor3 = CurrentTheme.text
-    btn.AutoButtonColor = false
-    btn.BorderSizePixel = 0
-    btn.LayoutOrder = nextOrder()
-    btn.Parent = titlePage
-    corner(btn, 8)
-    link(btn, "BackgroundColor3", "panel")
-    link(btn, "TextColor3", "text")
-    btn.MouseButton1Click:Connect(function()
-        titleLabel.Text = txt
-        notify("Title: " .. txt)
-    end)
+    local b=Instance.new("TextButton")
+    b.Size=UDim2.new(1,0,0,28) b.BackgroundColor3=T.panel b.Text=txt
+    b.Font=Enum.Font.GothamMedium b.TextSize=11 b.TextColor3=T.text
+    b.AutoButtonColor=false b.BorderSizePixel=0 b.LayoutOrder=nextOrder() b.Parent=titleP
+    corner(b,6) link(b,"BackgroundColor3","panel") link(b,"TextColor3","text")
+    b.MouseButton1Click:Connect(function() titleLabel.Text=txt notify("Title: "..txt) end)
 end
 
--- THEME TAB
-local themePage = Tabs["Theme"].page
-makeSection(themePage, "🎨 THEME")
-for _,name in ipairs({"Blue/Black","White/Gold","Purple/Black"}) do
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 38)
-    btn.BackgroundColor3 = CurrentTheme.panel
-    btn.Text = name
-    btn.Font = Enum.Font.GothamMedium
-    btn.TextSize = 14
-    btn.TextColor3 = CurrentTheme.text
-    btn.AutoButtonColor = false
-    btn.BorderSizePixel = 0
-    btn.LayoutOrder = nextOrder()
-    btn.Parent = themePage
-    corner(btn, 8)
-    link(btn, "BackgroundColor3", "panel")
-    link(btn, "TextColor3", "text")
-    btn.MouseButton1Click:Connect(function()
-        ApplyTheme(name)
-        notify("Theme: " .. name)
-    end)
+--========= THEME TAB =========--
+local themeP = Tabs["Theme"].page
+makeSection(themeP, "THEME")
+for _,n in ipairs({"Blue","Gold","Purple"}) do
+    local b=Instance.new("TextButton")
+    b.Size=UDim2.new(1,0,0,28) b.BackgroundColor3=T.panel b.Text=n.." Theme"
+    b.Font=Enum.Font.GothamMedium b.TextSize=11 b.TextColor3=T.text
+    b.AutoButtonColor=false b.BorderSizePixel=0 b.LayoutOrder=nextOrder() b.Parent=themeP
+    corner(b,6) link(b,"BackgroundColor3","panel") link(b,"TextColor3","text")
+    b.MouseButton1Click:Connect(function() applyTheme(n) notify("Theme: "..n) end)
 end
 
--- WIRING
-closeBtn.MouseButton1Click:Connect(function() main.Visible = false end)
+--========= WIRE =========--
+closeBtn.MouseButton1Click:Connect(function() main.Visible=false end)
+task.defer(function() task.wait(0.1) activateTab("Main") end)
 
-ApplyTheme("Blue/Black")
-task.defer(function() task.wait(0.1) activateTab("Features") end)
-notify("Xdrg Hub v6.0 loaded ✓")
+-- Resize handle (small)
+local rh = Instance.new("TextButton")
+rh.Size=UDim2.fromOffset(14,14) rh.Position=UDim2.new(1,-18,1,-18)
+rh.BackgroundColor3=T.accent rh.Text="◢" rh.Font=Enum.Font.GothamBold rh.TextSize=9
+rh.TextColor3=Color3.new(1,1,1) rh.AutoButtonColor=false rh.BorderSizePixel=0
+rh.ZIndex=5 rh.Parent=main
+corner(rh,4) link(rh,"BackgroundColor3","accent")
+
+local resizing, rStart, rSize = false
+rh.InputBegan:Connect(function(i)
+    if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
+        resizing=true rStart=i.Position rSize=main.AbsoluteSize
+    end
+end)
+UIS.InputChanged:Connect(function(i)
+    if not resizing then return end
+    if i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch then
+        local d=i.Position-rStart
+        main.Size=UDim2.fromOffset(math.max(260,rSize.X+d.X), math.max(320,rSize.Y+d.Y))
+    end
+end)
+UIS.InputEnded:Connect(function(i)
+    if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then resizing=false end
+end)
+
+notify("Xdrg v7.0 loaded ✓")
