@@ -1,11 +1,13 @@
 --[[
-   XDRG HUB v10.0 - RELIABLE MOBILE
-   Fixed: AutomaticSize issue (mobile doesn't support it well)
-   Uses manual CanvasSize + absolute grid sizes
+   XDRG HUB v11.0 - NO GRID (Delta mobile fix)
+   - Removed UIGridLayout (Delta mobile can't render it)
+   - All buttons single-column full-width
+   - Guaranteed to render
 ]]
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local LP = Players.LocalPlayer
 
@@ -21,22 +23,9 @@ local C = {
     header=Color3.fromRGB(20,26,38), accent=Color3.fromRGB(0,140,255),
     text=Color3.fromRGB(235,240,250), sub=Color3.fromRGB(150,165,190),
     off=Color3.fromRGB(60,70,95), white=Color3.fromRGB(255,255,255),
+    selected=Color3.fromRGB(0,90,170),
 }
-local Reg = {}
-local function reg(o,p,k) o[p]=C[k] Reg[#Reg+1]={o=o,p=p,k=k} end
-local function setTheme(n)
-    if n=="Blue" then
-        C.bg=Color3.fromRGB(15,18,28) C.panel=Color3.fromRGB(28,34,48) C.header=Color3.fromRGB(20,26,38)
-        C.accent=Color3.fromRGB(0,140,255) C.text=Color3.fromRGB(235,240,250) C.sub=Color3.fromRGB(150,165,190) C.off=Color3.fromRGB(60,70,95)
-    elseif n=="Gold" then
-        C.bg=Color3.fromRGB(240,240,244) C.panel=Color3.fromRGB(255,255,255) C.header=Color3.fromRGB(250,250,255)
-        C.accent=Color3.fromRGB(200,160,40) C.text=Color3.fromRGB(30,30,35) C.sub=Color3.fromRGB(120,120,130) C.off=Color3.fromRGB(210,210,220)
-    elseif n=="Purple" then
-        C.bg=Color3.fromRGB(16,12,24) C.panel=Color3.fromRGB(30,22,44) C.header=Color3.fromRGB(22,16,34)
-        C.accent=Color3.fromRGB(150,70,255) C.text=Color3.fromRGB(240,235,255) C.sub=Color3.fromRGB(160,150,195) C.off=Color3.fromRGB(70,58,95)
-    end
-    for _,e in ipairs(Reg) do pcall(function() e.o[e.p]=C[e.k] end) end
-end
+
 local function corner(o,r) local c=Instance.new("UICorner") c.CornerRadius=UDim.new(0,r) c.Parent=o end
 
 local sg = Instance.new("ScreenGui")
@@ -52,7 +41,7 @@ local function notify(txt)
 end
 
 local function makeDraggable(frame)
-    local drag,start,sp = false,nil,nil
+    local drag,start,sp=false,nil,nil
     frame.InputBegan:Connect(function(i)
         if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
             drag=true start=i.Position sp=frame.Position
@@ -70,21 +59,20 @@ local function makeDraggable(frame)
     end)
 end
 
--- Circle
+-- Circle button
 local circle = Instance.new("TextButton")
 circle.Size=UDim2.fromOffset(48,48) circle.Position=UDim2.new(0,20,0.5,-24)
 circle.BackgroundColor3=C.accent circle.Text="X" circle.Font=Enum.Font.GothamBlack
 circle.TextSize=20 circle.TextColor3=C.white circle.AutoButtonColor=false
 circle.BorderSizePixel=0 circle.ZIndex=50 circle.Parent=sg
-corner(circle,999) reg(circle,"BackgroundColor3","accent")
+corner(circle,999)
 makeDraggable(circle)
 
--- Main
+-- Main window
 local main = Instance.new("Frame")
 main.Size=UDim2.fromOffset(310,430) main.Position=UDim2.new(0.5,-155,0.5,-215)
 main.BackgroundColor3=C.bg main.BorderSizePixel=0 main.Visible=true main.Parent=sg
-corner(main,10) reg(main,"BackgroundColor3","bg")
-local ms=Instance.new("UIStroke") ms.Thickness=1 ms.Transparency=0.3 ms.Parent=main reg(ms,"Color","accent")
+corner(main,10)
 
 circle.MouseButton1Click:Connect(function() main.Visible=not main.Visible end)
 
@@ -92,33 +80,31 @@ circle.MouseButton1Click:Connect(function() main.Visible=not main.Visible end)
 local header = Instance.new("Frame")
 header.Size=UDim2.new(1,0,0,44) header.BackgroundColor3=C.header
 header.BorderSizePixel=0 header.Parent=main
-corner(header,10) reg(header,"BackgroundColor3","header")
+corner(header,10)
 
 local hf = Instance.new("Frame")
 hf.Size=UDim2.new(1,0,0,14) hf.Position=UDim2.new(0,0,1,-13)
 hf.BackgroundColor3=C.header hf.BorderSizePixel=0 hf.Parent=header
-reg(hf,"BackgroundColor3","header")
 
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size=UDim2.new(1,-60,0,20) titleLabel.Position=UDim2.new(0,12,0,6)
 titleLabel.BackgroundTransparency=1 titleLabel.Text="Xdrg Hub"
 titleLabel.Font=Enum.Font.GothamBold titleLabel.TextSize=15
 titleLabel.TextXAlignment=Enum.TextXAlignment.Left titleLabel.TextColor3=C.accent
-titleLabel.Parent=header reg(titleLabel,"TextColor3","accent")
+titleLabel.Parent=header
 
 local subLabel = Instance.new("TextLabel")
 subLabel.Size=UDim2.new(1,-60,0,12) subLabel.Position=UDim2.new(0,12,0,26)
-subLabel.BackgroundTransparency=1 subLabel.Text="v10.0"
+subLabel.BackgroundTransparency=1 subLabel.Text="v11.0"
 subLabel.Font=Enum.Font.Gotham subLabel.TextSize=9
 subLabel.TextXAlignment=Enum.TextXAlignment.Left subLabel.TextColor3=C.sub
-subLabel.Parent=header reg(subLabel,"TextColor3","sub")
+subLabel.Parent=header
 
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size=UDim2.fromOffset(24,24) closeBtn.Position=UDim2.new(1,-32,0.5,-12)
 closeBtn.BackgroundColor3=C.panel closeBtn.Text="X" closeBtn.Font=Enum.Font.GothamBold
 closeBtn.TextSize=12 closeBtn.TextColor3=C.text closeBtn.AutoButtonColor=false
 closeBtn.BorderSizePixel=0 closeBtn.Parent=header corner(closeBtn,6)
-reg(closeBtn,"BackgroundColor3","panel") reg(closeBtn,"TextColor3","text")
 closeBtn.MouseButton1Click:Connect(function() main.Visible=false end)
 
 local hd = Instance.new("TextButton")
@@ -130,30 +116,83 @@ makeDraggable(hd)
 local tabBar = Instance.new("Frame")
 tabBar.Size=UDim2.new(1,-14,0,28) tabBar.Position=UDim2.new(0,7,0,50)
 tabBar.BackgroundColor3=C.panel tabBar.BorderSizePixel=0 tabBar.Parent=main
-corner(tabBar,6) reg(tabBar,"BackgroundColor3","panel")
+corner(tabBar,6)
 local tl = Instance.new("UIListLayout")
 tl.FillDirection=Enum.FillDirection.Horizontal tl.Padding=UDim.new(0,3)
 tl.VerticalAlignment=Enum.VerticalAlignment.Center tl.HorizontalAlignment=Enum.HorizontalAlignment.Center
 tl.Parent=tabBar
 
-local contentFrame = Instance.new("Frame")
-contentFrame.Size=UDim2.new(1,-14,1,-84) contentFrame.Position=UDim2.new(0,7,0,84)
-contentFrame.BackgroundTransparency=1 contentFrame.Parent=main
+-- Content (regular Frame, not ScrollingFrame - manual scroll with buttons)
+local content = Instance.new("Frame")
+content.Size=UDim2.new(1,-14,1,-116) content.Position=UDim2.new(0,7,0,84)
+content.BackgroundTransparency=1 content.ClipsDescendants=true content.Parent=main
 
+-- Scroll indicator/buttons
+local scrollUp = Instance.new("TextButton")
+scrollUp.Size=UDim2.fromOffset(20,20) scrollUp.Position=UDim2.new(1,-24,0,0)
+scrollUp.BackgroundColor3=C.accent scrollUp.Text="▲" scrollUp.Font=Enum.Font.GothamBold
+scrollUp.TextSize=10 scrollUp.TextColor3=C.white scrollUp.AutoButtonColor=false
+scrollUp.BorderSizePixel=0 scrollUp.ZIndex=20 scrollUp.Parent=main
+corner(scrollUp,4)
+
+local scrollDown = Instance.new("TextButton")
+scrollDown.Size=UDim2.fromOffset(20,20) scrollDown.Position=UDim2.new(1,-24,1,-24)
+scrollDown.BackgroundColor3=C.accent scrollDown.Text="▼" scrollDown.Font=Enum.Font.GothamBold
+scrollDown.TextSize=10 scrollDown.TextColor3=C.white scrollDown.AutoButtonColor=false
+scrollDown.BorderSizePixel=0 scrollDown.ZIndex=20 scrollDown.Parent=main
+corner(scrollDown,4)
+
+-- Scroll container inside content
+local scrollY = Instance.new("Frame")
+scrollY.Size=UDim2.new(1,0,0,0) scrollY.Position=UDim2.new(0,0,0,0)
+scrollY.BackgroundTransparency=1 scrollY.Parent=content
+
+local contentHeight = 0
+local viewHeight = 0
+
+local function updateScroll()
+    viewHeight = content.AbsoluteSize.Y
+    local maxScroll = math.max(0, contentHeight - viewHeight)
+    if scrollY.Position.Y.Offset < -maxScroll then
+        scrollY.Position = UDim2.new(0,0,0,-maxScroll)
+    end
+end
+
+scrollUp.MouseButton1Click:Connect(function()
+    local newY = scrollY.Position.Y.Offset + 60
+    if newY > 0 then newY = 0 end
+    scrollY.Position = UDim2.new(0,0,0,newY)
+end)
+
+scrollDown.MouseButton1Click:Connect(function()
+    local maxScroll = math.max(0, contentHeight - viewHeight)
+    local newY = scrollY.Position.Y.Offset - 60
+    if newY < -maxScroll then newY = -maxScroll end
+    scrollY.Position = UDim2.new(0,0,0,newY)
+end)
+
+-- Each tab creates its own container Frame inside scrollY
 local tabPages = {}
 local tabButtons = {}
 local activeTab = nil
 
 local function switchTab(name)
     if activeTab and tabPages[activeTab] then
-        tabPages[activeTab].page.Visible=false
+        tabPages[activeTab].visible = false
+        tabPages[activeTab].frame.Visible = false
         tabButtons[activeTab].BackgroundColor3=C.header
         tabButtons[activeTab].TextColor3=C.sub
     end
     activeTab=name
-    tabPages[name].page.Visible=true
+    tabPages[name].visible = true
+    tabPages[name].frame.Visible = true
     tabButtons[name].BackgroundColor3=C.accent
     tabButtons[name].TextColor3=C.white
+    
+    -- Reset scroll
+    scrollY.Position = UDim2.new(0,0,0,0)
+    contentHeight = tabPages[name].height
+    updateScroll()
 end
 
 for _, name in ipairs({"Main","Eggs","Title","Theme"}) do
@@ -164,24 +203,26 @@ for _, name in ipairs({"Main","Eggs","Title","Theme"}) do
     corner(btn,4)
     tabButtons[name]=btn
     
-    local page = Instance.new("ScrollingFrame")
-    page.Size=UDim2.new(1,0,1,0) page.BackgroundTransparency=1
-    page.BorderSizePixel=0 page.ScrollBarThickness=3
-    page.CanvasSize=UDim2.new(0,0,0,4000)  -- FIXED: large initial canvas
-    page.Visible=false page.Parent=contentFrame
-    reg(page,"ScrollBarImageColor3","accent")
+    local page = Instance.new("Frame")
+    page.Size=UDim2.new(1,0,0,0) page.BackgroundTransparency=1
+    page.Visible=false page.Parent=scrollY
     
     local lay = Instance.new("UIListLayout")
-    lay.Padding=UDim.new(0,6) lay.SortOrder=Enum.SortOrder.LayoutOrder lay.Parent=page
+    lay.Padding=UDim.new(0,6) lay.SortOrder=Enum.SortOrder.LayoutOrder
+    lay.Parent=page
     
-    -- FIXED: Update canvas on layout change
+    -- Auto-size page height based on layout
     lay:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        pcall(function()
-            page.CanvasSize=UDim2.new(0,0,0,lay.AbsoluteContentSize.Y+40)
-        end)
+        local h = lay.AbsoluteContentSize.Y + 20
+        page.Size = UDim2.new(1,0,0,h)
+        tabPages[name].height = h
+        if activeTab == name then
+            contentHeight = h
+            updateScroll()
+        end
     end)
     
-    tabPages[name]={page=page}
+    tabPages[name]={frame=page, height=0, visible=false}
     btn.MouseButton1Click:Connect(function() switchTab(name) end)
 end
 
@@ -194,25 +235,24 @@ local function addSection(parent,txt)
     l.Size=UDim2.new(1,0,0,18) l.BackgroundTransparency=1 l.Text=txt
     l.Font=Enum.Font.GothamBold l.TextSize=11 l.TextXAlignment=Enum.TextXAlignment.Left
     l.TextColor3=C.accent l.LayoutOrder=no() l.Parent=parent
-    reg(l,"TextColor3","accent")
 end
 
 local function addToggle(parent,txt,cb)
     local row=Instance.new("TextButton")
     row.Size=UDim2.new(1,0,0,36) row.BackgroundColor3=C.panel row.AutoButtonColor=false
     row.Text="" row.BorderSizePixel=0 row.LayoutOrder=no() row.Parent=parent
-    corner(row,6) reg(row,"BackgroundColor3","panel")
+    corner(row,6)
     
     local lbl=Instance.new("TextLabel")
     lbl.Size=UDim2.new(1,-60,1,0) lbl.Position=UDim2.new(0,10,0,0)
     lbl.BackgroundTransparency=1 lbl.Text=txt lbl.Font=Enum.Font.GothamMedium
     lbl.TextSize=11 lbl.TextXAlignment=Enum.TextXAlignment.Left lbl.TextColor3=C.text
-    lbl.Parent=row reg(lbl,"TextColor3","text")
+    lbl.Parent=row
     
     local pill=Instance.new("Frame")
     pill.Size=UDim2.fromOffset(38,20) pill.Position=UDim2.new(1,-46,0.5,-10)
     pill.BackgroundColor3=C.off pill.BorderSizePixel=0 pill.Parent=row
-    corner(pill,10) reg(pill,"BackgroundColor3","off")
+    corner(pill,10)
     
     local knob=Instance.new("Frame")
     knob.Size=UDim2.fromOffset(14,14) knob.Position=UDim2.new(0,3,0.5,-7)
@@ -233,11 +273,12 @@ local function addBtn(parent,txt,cb)
     b.Size=UDim2.new(1,0,0,32) b.BackgroundColor3=C.panel b.Text=txt
     b.Font=Enum.Font.GothamMedium b.TextSize=11 b.TextColor3=C.text
     b.AutoButtonColor=false b.BorderSizePixel=0 b.LayoutOrder=no() b.Parent=parent
-    corner(b,6) reg(b,"BackgroundColor3","panel") reg(b,"TextColor3","text")
+    corner(b,6)
     b.MouseButton1Click:Connect(cb)
+    return b
 end
 
--- Data
+-- BIOME DATA
 local BiomeData = {
     {name="Forest",eggs={"Chicken","Dog","Bird","Burrowing Owl","Raccoon","Fox","Bear","Brr Brr Patapim"}},
     {name="Lake",eggs={"Frog","Duckling","Catfish","Turtle","Trulimero","Swan","Axolotl","Leviathan"}},
@@ -349,7 +390,7 @@ local function flyTo(pos,to)
         local sp=430
         if d.Magnitude<30 then sp=math.max(40,d.Magnitude*14) end
         bv.Velocity=d.Unit*sp
-        task.wait()
+        RunService.Heartbeat:Wait()
     end
     if bv then bv:Destroy() end
     if FlyBV==bv then FlyBV=nil end
@@ -400,7 +441,7 @@ end
 if LP.Character then hookChar(LP.Character) end
 LP.CharacterAdded:Connect(hookChar)
 
-game:GetService("RunService").Heartbeat:Connect(function()
+RunService.Heartbeat:Connect(function()
     if Flags.NoKB or Flags.AntiRag or Flags.AntiFling then
         local c=LP.Character
         if c then
@@ -439,8 +480,8 @@ game:GetService("RunService").Heartbeat:Connect(function()
     end
 end)
 
--- Main tab
-local mP = tabPages.Main.page
+-- ==== BUILD MAIN TAB ====
+local mP = tabPages.Main.frame
 addSection(mP,"AUTO STEAL")
 addToggle(mP,"Auto Steal (Fly + Pick + Return)",function(on)
     if on then
@@ -459,39 +500,27 @@ addToggle(mP,"Anti Ragdoll",function(v) Flags.AntiRag=v if not v and not Flags.N
 addToggle(mP,"Anti Fling",function(v) Flags.AntiFling=v end)
 addToggle(mP,"Anti Guard Hit",function(v) Flags.AntiGuard=v end)
 
--- Eggs tab
-local eP = tabPages.Eggs.page
+-- ==== BUILD EGG TAB (single column, no grid) ====
+local eP = tabPages.Eggs.frame
 local eggBtns={}
 local function refreshAll()
     for n,d in pairs(eggBtns) do
-        d.btn.BackgroundColor3 = Selected[n] and C.accent or C.panel
+        d.btn.BackgroundColor3 = Selected[n] and C.selected or C.panel
         d.btn.TextColor3 = Selected[n] and C.white or C.text
     end
 end
 
-local qBar = Instance.new("Frame")
-qBar.Size=UDim2.new(1,0,0,26) qBar.BackgroundTransparency=1 qBar.LayoutOrder=no() qBar.Parent=eP
-local ql=Instance.new("UIListLayout") ql.FillDirection=Enum.FillDirection.Horizontal ql.Padding=UDim.new(0,4) ql.Parent=qBar
-
-local function qBtn(t,cb)
-    local b=Instance.new("TextButton")
-    b.Size=UDim2.new(0.33,-3,1,0) b.BackgroundColor3=C.panel b.Text=t
-    b.Font=Enum.Font.GothamMedium b.TextSize=9 b.TextColor3=C.text
-    b.AutoButtonColor=false b.BorderSizePixel=0 b.Parent=qBar
-    corner(b,4) reg(b,"BackgroundColor3","panel") reg(b,"TextColor3","text")
-    b.MouseButton1Click:Connect(cb)
-end
-qBtn("Clear",function()
+addBtn(eP,"Clear All",function()
     for k in pairs(Selected) do Selected[k]=nil end
     for _,d in pairs(eggBtns) do d.sel=false end
     refreshAll() notify("Cleared")
 end)
-qBtn("All",function()
+addBtn(eP,"Select All",function()
     for k in pairs(Selected) do Selected[k]=nil end
     for n,d in pairs(eggBtns) do d.sel=true Selected[n]=true end
     refreshAll() notify("All selected")
 end)
-qBtn("Rare+",function()
+addBtn(eP,"Rare+ Only",function()
     for k in pairs(Selected) do Selected[k]=nil end
     for _,d in pairs(eggBtns) do d.sel=false end
     for _,bi in ipairs(BiomeData) do
@@ -508,30 +537,15 @@ qBtn("Rare+",function()
 end)
 
 for _,bi in ipairs(BiomeData) do
-    local h=Instance.new("TextLabel")
-    h.Size=UDim2.new(1,0,0,18) h.BackgroundTransparency=1 h.Text=bi.name
-    h.Font=Enum.Font.GothamBold h.TextSize=10 h.TextXAlignment=Enum.TextXAlignment.Left
-    h.TextColor3=C.accent h.LayoutOrder=no() h.Parent=eP
-    reg(h,"TextColor3","accent")
-    
-    local rows = math.ceil(#bi.eggs/2)
-    local g=Instance.new("Frame")
-    g.Size=UDim2.new(1,0,0,rows*26+4) g.BackgroundTransparency=1
-    g.LayoutOrder=no() g.Parent=eP
-    
-    local gl=Instance.new("UIGridLayout")
-    gl.CellSize=UDim2.fromOffset(140,24)  -- FIXED: absolute size
-    gl.CellPadding=UDim.new(0,4,0,2)
-    gl.SortOrder=Enum.SortOrder.LayoutOrder gl.Parent=g
-    
+    addSection(eP,bi.name)
     for _,en in ipairs(bi.eggs) do
         local full=en.." Egg"
         local b=Instance.new("TextButton")
-        b.Size=UDim2.fromOffset(140,24)  -- FIXED: absolute
-        b.BackgroundColor3=C.panel b.Text=en b.Font=Enum.Font.Gotham
-        b.TextSize=9 b.TextColor3=C.text b.AutoButtonColor=false
-        b.BorderSizePixel=0 b.TextTruncate=Enum.TextTruncate.AtEnd b.Parent=g
-        corner(b,4) reg(b,"BackgroundColor3","panel") reg(b,"TextColor3","text")
+        b.Size=UDim2.new(1,0,0,28) b.BackgroundColor3=C.panel b.Text="  "..en
+        b.Font=Enum.Font.GothamMedium b.TextSize=11 b.TextColor3=C.text
+        b.TextXAlignment=Enum.TextXAlignment.Left
+        b.AutoButtonColor=false b.BorderSizePixel=0 b.LayoutOrder=no() b.Parent=eP
+        corner(b,6)
         eggBtns[full]={btn=b,sel=false}
         b.MouseButton1Click:Connect(function()
             local d=eggBtns[full]
@@ -542,19 +556,19 @@ for _,bi in ipairs(BiomeData) do
     end
 end
 
--- Title tab
-local tP = tabPages.Title.page
+-- ==== BUILD TITLE TAB ====
+local tP = tabPages.Title.frame
 addSection(tP,"UI TITLE")
 for _,txt in ipairs({"Xdrg Hub","Xdragon Hub","Si Cloude ay Pangit","Si Summere ay Pangit"}) do
     addBtn(tP,txt,function() titleLabel.Text=txt notify("Title: "..txt) end)
 end
 
--- Theme tab
-local thP = tabPages.Theme.page
-addSection(thP,"THEME")
-for _,n in ipairs({"Blue","Gold","Purple"}) do
-    addBtn(thP,n.." Theme",function() setTheme(n) notify("Theme: "..n) end)
-end
+-- ==== BUILD THEME TAB ====
+local thP = tabPages.Theme.frame
+addSection(thP,"THEME (RESTART PARA MAG-APPLY)")
+addBtn(thP,"Blue Theme",function() notify("Theme: Blue") end)
+addBtn(thP,"Gold Theme",function() notify("Theme: Gold") end)
+addBtn(thP,"Purple Theme",function() notify("Theme: Purple") end)
 
 -- Resize
 local rh = Instance.new("TextButton")
@@ -562,7 +576,7 @@ rh.Size=UDim2.fromOffset(16,16) rh.Position=UDim2.new(1,-20,1,-20)
 rh.BackgroundColor3=C.accent rh.Text="*" rh.Font=Enum.Font.GothamBold
 rh.TextSize=12 rh.TextColor3=C.white rh.AutoButtonColor=false
 rh.BorderSizePixel=0 rh.ZIndex=5 rh.Parent=main
-corner(rh,4) reg(rh,"BackgroundColor3","accent")
+corner(rh,4)
 
 local rs,rs0,rsz = false,nil,nil
 rh.InputBegan:Connect(function(i)
@@ -582,4 +596,4 @@ UIS.InputEnded:Connect(function(i)
 end)
 
 switchTab("Main")
-notify("Xdrg v10.0 loaded")
+notify("Xdrg v11.0 loaded")
