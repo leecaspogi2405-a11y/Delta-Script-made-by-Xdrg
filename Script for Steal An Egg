@@ -115,7 +115,7 @@ titleLabel.TextXAlignment=Enum.TextXAlignment.Left titleLabel.Parent=header
 link(titleLabel,"TextColor3","accent")
 
 local subLabel = Instance.new("TextLabel")
-subLabel.Text="v7.0 mobile" subLabel.Font=Enum.Font.Gotham titleLabel.TextSize
+subLabel.Text="v7.0 mobile" subLabel.Font=Enum.Font.Gotham
 subLabel.TextSize=9 subLabel.TextColor3=T.sub subLabel.BackgroundTransparency=1
 subLabel.Position=UDim2.new(0,10,0,21) subLabel.Size=UDim2.new(1,-50,0,12)
 subLabel.TextXAlignment=Enum.TextXAlignment.Left subLabel.Parent=header
@@ -128,7 +128,7 @@ closeBtn.TextSize=12 closeBtn.TextColor3=T.text closeBtn.AutoButtonColor=false
 closeBtn.BorderSizePixel=0 closeBtn.Parent=header
 corner(closeBtn,6) link(closeBtn,"BackgroundColor3","panel") link(closeBtn,"TextColor3","text")
 
--- Invisible drag overlay covering header area (so title doesn't block)
+-- Invisible drag overlay covering header area
 local headerDrag = Instance.new("TextButton")
 headerDrag.Size=UDim2.new(1,-60,1,0) headerDrag.Position=UDim2.new(0,0,0,0)
 headerDrag.BackgroundTransparency=1 headerDrag.Text="" headerDrag.AutoButtonColor=false
@@ -373,18 +373,14 @@ local function restore()
         hum:SetStateEnabled(Enum.HumanoidStateType.PlatformStanding,true)
     end)
 end
-if LP.Character then
-    LP.Character.DescendantAdded:Connect(function(d)
-        if d.Name=="XdrgAutoFly" then return end
-        if (Flags.NoKB or Flags.AntiFling) and isMover(d) then task.defer(function() if d and d.Parent then d:Destroy() end end) end
-    end)
-end
-LP.CharacterAdded:Connect(function(c)
+local function hookChar(c)
     c.DescendantAdded:Connect(function(d)
         if d.Name=="XdrgAutoFly" then return end
         if (Flags.NoKB or Flags.AntiFling) and isMover(d) then task.defer(function() if d and d.Parent then d:Destroy() end end) end
     end)
-end)
+end
+if LP.Character then hookChar(LP.Character) end
+LP.CharacterAdded:Connect(hookChar)
 
 RunService.Heartbeat:Connect(function()
     if Flags.NoKB or Flags.AntiRag or Flags.AntiFling then
